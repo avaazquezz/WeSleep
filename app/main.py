@@ -1,13 +1,11 @@
 from fastapi import FastAPI
-from app.core.config import settings
-
-
+from app.config import settings
 
 from contextlib import asynccontextmanager
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    from app.core.db import init_db
+    from app.database import init_db
     await init_db()
     yield
 
@@ -17,7 +15,7 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-from app.api.api import api_router
+from app.routers import api_router
 app.include_router(api_router, prefix=settings.API_V1_STR)
 
 @app.get("/health", status_code=200)

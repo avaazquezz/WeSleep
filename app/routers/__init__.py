@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from app.api.v1.endpoints import wearable, alarm
+from app.routers import wearable, alarm
 
 api_router = APIRouter()
 

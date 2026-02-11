@@ -1,11 +1,34 @@
 from datetime import datetime
-from typing import Optional, Dict, Any
-from uuid import UUID
-from enum import Enum
 from typing import Optional, Dict, Any, List
+from uuid import UUID, uuid4
+from enum import Enum
 
-from pydantic import BaseModel, Field
+from sqlmodel import Field, SQLModel, JSON
+from sqlalchemy import Column
+from sqlalchemy.dialects.sqlite import JSON as SQLiteJSON
+from pydantic import BaseModel, ConfigDict
 
+
+# --- Enums & Auxiliary Models ---
+
+class SleepPhase(str, Enum):
+    DEEP = "deep"
+    LIGHT = "light"
+    REM = "rem"
+    AWAKE = "awake"
+
+class SleepSegment(BaseModel):
+    start_at: datetime
+    end_at: datetime
+    phase: SleepPhase
+
+class WearableSource(BaseModel):
+    """
+    Información sobre la fuente de los datos (dispositivo, versión).
+    """
+    source_version: Optional[str] = Field(None, description="Versión del SO o App fuente")
+    source_bundle_identifier: Optional[str] = Field(None, description="Identificador del bundle de la App fuente")
+    model_config = ConfigDict(extra="allow")
 
 class WearableMetrics(BaseModel):
     """
@@ -31,18 +54,7 @@ class WearableMetrics(BaseModel):
     skin_temperature: Optional[float] = Field(None, description="Temperatura de la piel promedio")
     skin_temperature_max: Optional[float] = Field(None, description="Temperatura de la piel máxima")
     skin_temperature_min: Optional[float] = Field(None, description="Temperatura de la piel mínima")
-    # Permitir campos extra si el proveedor envía más datos en el futuro
-    model_config = {"extra": "allow"}
-
-
-class WearableSource(BaseModel):
-    """
-    Información sobre la fuente de los datos (dispositivo, versión).
-    """
-    source_version: Optional[str] = Field(None, description="Versión del SO o App fuente")
-    source_bundle_identifier: Optional[str] = Field(None, description="Identificador del bundle de la App fuente")
-    model_config = {"extra": "allow"}
-
+    model_config = ConfigDict(extra="allow")
 
 class WearableRawPayload(BaseModel):
     """
@@ -67,9 +79,9 @@ class WearableRawPayload(BaseModel):
     sleep_id: Optional[UUID] = Field(None, description="ID asociado al sueño, si existe")
     score: Optional[int] = Field(None, description="Puntuación de sueño calculada por el proveedor")
 
-    model_config = {
-        "extra": "allow",
-        "json_schema_extra": {
+    model_config = ConfigDict(
+        extra="allow",
+        json_schema_extra={
             "example": {
                 "record_id": "0134ff3c-3f60-8c46-8e4e-c0dd218c4e3a",
                 "modified_at": "2025-04-30T12:00:26Z",
@@ -84,20 +96,7 @@ class WearableRawPayload(BaseModel):
                 "provider_slug": "apple"
             }
         }
-    }
-
-
-class SleepPhase(str, Enum):
-    DEEP = "deep"
-    LIGHT = "light"
-    REM = "rem"
-    AWAKE = "awake"
-
-class SleepSegment(BaseModel):
-    start_at: datetime
-    end_at: datetime
-    phase: SleepPhase
-
+    )
 
 class CleanSleepData(BaseModel):
     """
@@ -128,10 +127,41 @@ class CleanSleepData(BaseModel):
     sleep_duration_awake: int = Field(0, description="Duración despierto en ms")
 
     # Time Series (Hypnogram)
-    hypnogram: List["SleepSegment"] = Field(default_factory=list, description="Secuencia de fases de sueño")
+    hypnogram: List[SleepSegment] = Field(default_factory=list, description="Secuencia de fases de sueño")
+
+    model_config = ConfigDict(extra="ignore")
 
 
-    model_config = {
-        "extra": "ignore"  # Solo queremos los datos limpios definidos
-    }
+# --- Database Models ---
 
+class SleepRecord(SQLModel, table=True):
+    __tablename__ = "sleep_records"
+
+    id: UUID = Field(default_factory=uuid4, primary_key=True)
+    user_id: UUID = Field(index=True, nullable=False) # Simulado por ahora, vendría del token
+    timestamp: datetime = Field(default_factory=datetime.utcnow, index=True)
+    
+    # Metadatos para búsqueda rápida
+    provider_source: str = Field(index=True)
+    record_id_provider: str = Field(index=True)
+    
+    # Payload completo
+    payload: Dict[str, Any] = Field(default={}, sa_column=Column(JSON))
+
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+
+# --- API Request/Response Models ---
+
+class WakeupPrediction(BaseModel):
+    suggested_time: datetime
+    confidence: float
+    reasoning: str
+
+class SmartAlarmRequest(BaseModel):
+    sleep_record_id: UUID = Field(..., description="ID del registro de sueño a analizar")
+    target_time: datetime = Field(..., description="Hora objetivo para despertar")
+
+class SmartAlarmResponse(WakeupPrediction):
+    quality_score: float = Field(..., description="Puntuación de calidad del sueño (0-100)")
+    anomalies: List[str] = Field(default_factory=list, description="Lista de anomalías detectadas")
