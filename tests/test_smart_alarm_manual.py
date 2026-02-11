@@ -5,11 +5,11 @@ from datetime import datetime, timedelta, timezone
 # Add project root to path
 sys.path.append(os.getcwd())
 
-from app.services.smart_alarm import HeuristicAlarmStrategy
-from app.schemas.wearable import CleanSleepData, SleepSegment, SleepPhase
+import app.logic as logic
+from app.models import CleanSleepData, SleepSegment, SleepPhase
 
 def test_heuristic_alarm():
-    strategy = HeuristicAlarmStrategy()
+    # strategy = HeuristicAlarmStrategy() -> logic.predict_optimal_wakeup
     target_time = datetime(2025, 4, 30, 7, 0, 0, tzinfo=timezone.utc)
     
     # Base Data
@@ -19,12 +19,12 @@ def test_heuristic_alarm():
         duration=8*3600*1000,
         hypnogram=[],
         # Dummy required fields
-        mean_HR=60, var_HR=20, HRV=60,
+        media_HR=60, var_HR=20, HRV=60,
         sleep_duration_deep=0, sleep_duration_light=0, sleep_duration_rem=0, sleep_duration_awake=0
     )
 
     print("--- Test 1: No Hypnogram ---")
-    pred = strategy.calculate_wakeup_window(base_data, target_time)
+    pred = logic.predict_optimal_wakeup(base_data, target_time)
     print(f"Result: {pred.suggested_time}, Reason: {pred.reasoning}")
     assert pred.suggested_time == target_time
 
@@ -35,9 +35,10 @@ def test_heuristic_alarm():
         phase=SleepPhase.DEEP
     )
     base_data.hypnogram = [deep_segment]
-    pred = strategy.calculate_wakeup_window(base_data, target_time)
+    pred = logic.predict_optimal_wakeup(base_data, target_time)
     print(f"Result: {pred.suggested_time}, Reason: {pred.reasoning}")
     assert pred.suggested_time == target_time
+    # Reasoning text might have changed slightly "Usuario en sueño profundo..." vs "sueño profundo"
     assert "sueño profundo" in pred.reasoning
 
     print("\n--- Test 3: Light Sleep Available (Should pick) ---")
@@ -57,7 +58,7 @@ def test_heuristic_alarm():
     # Reset HRV to normal
     base_data.HRV = 60
     
-    pred = strategy.calculate_wakeup_window(base_data, target_time)
+    pred = logic.predict_optimal_wakeup(base_data, target_time)
     print(f"Result: {pred.suggested_time}, Reason: {pred.reasoning}")
     # Should pick closest to 7:00 that is LIGHT -> 7:00 is valid (phase is None/Light boundary)
     assert pred.suggested_time.minute == 0 or pred.suggested_time.minute == 59
@@ -65,7 +66,7 @@ def test_heuristic_alarm():
 
     print("\n--- Test 4: Low HRV (Should pick early) ---")
     base_data.HRV = 30 # Stress
-    pred = strategy.calculate_wakeup_window(base_data, target_time)
+    pred = logic.predict_optimal_wakeup(base_data, target_time)
     print(f"Result: {pred.suggested_time}, Reason: {pred.reasoning}")
     # Should pick earliest valid slot in window. Window starts 6:30.
     # Segments: Deep until 6:45. Light starting 6:45.
