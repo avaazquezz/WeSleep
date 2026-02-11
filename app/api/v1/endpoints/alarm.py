@@ -35,4 +35,16 @@ async def predict_smart_alarm(
     # 3. Calculate wakeup window
     prediction = strategy.calculate_wakeup_window(clean_data, request.target_time)
     
-    return prediction
+    # 4. Calculate sleep quality and anomalies
+    from app.services.evaluator import SleepEvaluator
+    evaluator = SleepEvaluator()
+    quality_score = evaluator.calculate_score(clean_data)
+    anomalies = evaluator.detect_anomalies(clean_data)
+
+    return SmartAlarmResponse(
+        suggested_time=prediction.suggested_time,
+        confidence=prediction.confidence,
+        reasoning=prediction.reasoning,
+        quality_score=quality_score,
+        anomalies=anomalies
+    )
