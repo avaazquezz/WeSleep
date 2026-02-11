@@ -83,3 +83,37 @@ class WearableRawPayload(BaseModel):
             }
         }
     }
+
+
+class CleanSleepData(BaseModel):
+    """
+    Formato interno optimizado y normalizado de datos de sueño.
+    """
+    start_at_timestamp: datetime = Field(..., description="Inicio del periodo de sueño")
+    end_at_timestamp: datetime = Field(..., description="Fin del periodo de sueño")
+    duration: int = Field(..., description="Duración total en milisegundos")
+    
+    # Métricas Cardíacas
+    media_HR: Optional[float] = Field(None, description="Frecuencia cardíaca media")
+    var_HR: Optional[float] = Field(None, description="Varianza de FC (o HRV SDNN como proxy)")
+    HRV: Optional[float] = Field(None, description="Variabilidad de la frecuencia cardíaca (SDNN)")
+    
+    # Oxigenación
+    SpO2: Optional[float] = Field(None, description="SpO2 promedio")
+    SpO2_min: Optional[float] = Field(None, description="SpO2 mínimo")
+    SpO2_max: Optional[float] = Field(None, description="SpO2 máximo")
+    
+    # Movimiento y Respiración
+    movimiento: Optional[float] = Field(None, description="Índice de movimiento normalizado (0-1)")
+    breathing_rate: Optional[float] = Field(None, description="Frecuencia respiratoria media")
+    
+    # Fases del Sueño
+    sleep_duration_deep: int = Field(0, description="Duración sueño profundo en ms")
+    sleep_duration_light: int = Field(0, description="Duración sueño ligero en ms")
+    sleep_duration_rem: int = Field(0, description="Duración sueño REM en ms")
+    sleep_duration_awake: int = Field(0, description="Duración despierto en ms")
+
+    model_config = {
+        "extra": "ignore"  # Solo queremos los datos limpios definidos
+    }
+
