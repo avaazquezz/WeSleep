@@ -1,3 +1,8 @@
+"""
+API endpoints for Wearable Data Ingestion.
+
+Handles the reception and storage of raw sleep data from providers like Apple HealthKit.
+"""
 from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -14,11 +19,20 @@ async def ingest_wearable_data(
     # user_id: UUID = Depends(get_current_user_id) # TODO: Implementar Auth
 ) -> UUID:
     """
-    Ingesta de datos crudos de weareables (ej. Apple HealthKit).
-    
-    - Valida el payload contra el esquema estricto.
-    - Persiste el JSON crudo para auditoría y procesamiento futuro.
-    - Retorna el UUID del registro creado internamente.
+    Ingest raw wearable data.
+
+    Receives a raw JSON payload (e.g., from Apple HealthKit), validates it against
+    the strict `WearableRawPayload` schema, and persists it in the database.
+
+    Args:
+        payload (WearableRawPayload): The raw data to ingest.
+        session (AsyncSession): Database session.
+
+    Returns:
+        UUID: The internal ID of the created SleepRecord.
+
+    Raises:
+        HTTPException(500): If there is an internal processing error.
     """
     try:
         # En un escenario real, user_id vendría del token de autenticación

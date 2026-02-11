@@ -1,11 +1,26 @@
 from fastapi import FastAPI
 from app.config import settings
 
+"""
+Main entry point for the WeSleep API application.
+
+This module configures the FastAPI application, includes routers,
+and defines the startup events (such as database initialization).
+"""
 from contextlib import asynccontextmanager
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     from app.database import init_db
+    """
+    Lifespan context manager for the FastAPI application.
+
+    Args:
+        app (FastAPI): The FastAPI application instance.
+
+    Yields:
+        None: Yields control back to the application.
+    """
     await init_db()
     yield
 

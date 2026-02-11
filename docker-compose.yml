@@ -1,15 +1,21 @@
+# WeSleep - Docker Compose Configuration
+# Orchestrates the API service and persists data via volumes.
+
 services:
   api:
     build: .
     container_name: wesleep-api
+    # Map host port 8000 to container port 8000
     ports:
       - "8000:8000"
+    # Persist SQLite data and hot-reload code
     volumes:
       - .:/app
       - sqlite_data:/app/data
     environment:
       - PROJECT_NAME=WeSleep
       - API_V1_STR=/api/v1
+      # Connection string using aiosqlite driver
       - SQLITE_URL=sqlite+aiosqlite:////app/data/wesleep.db
     restart: unless-stopped
     healthcheck:

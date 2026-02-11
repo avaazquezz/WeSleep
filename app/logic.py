@@ -1,3 +1,12 @@
+"""
+Core business logic for sleep analysis.
+
+Includes functions for:
+- Parsing raw payloads into `CleanSleepData`.
+- Calculating sleep scores.
+- Detecting anomalies (Apnea, Fragmentation).
+- Predicting optimal wake-up times (Smart Alarm).
+"""
 from datetime import datetime, timedelta, timezone
 from typing import List, Optional, Dict, Any
 from uuid import UUID
