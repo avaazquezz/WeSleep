@@ -1,6 +1,8 @@
 from datetime import datetime
 from typing import Optional, Dict, Any
 from uuid import UUID
+from enum import Enum
+from typing import Optional, Dict, Any, List
 
 from pydantic import BaseModel, Field
 
@@ -85,6 +87,18 @@ class WearableRawPayload(BaseModel):
     }
 
 
+class SleepPhase(str, Enum):
+    DEEP = "deep"
+    LIGHT = "light"
+    REM = "rem"
+    AWAKE = "awake"
+
+class SleepSegment(BaseModel):
+    start_at: datetime
+    end_at: datetime
+    phase: SleepPhase
+
+
 class CleanSleepData(BaseModel):
     """
     Formato interno optimizado y normalizado de datos de sueño.
@@ -112,6 +126,10 @@ class CleanSleepData(BaseModel):
     sleep_duration_light: int = Field(0, description="Duración sueño ligero en ms")
     sleep_duration_rem: int = Field(0, description="Duración sueño REM en ms")
     sleep_duration_awake: int = Field(0, description="Duración despierto en ms")
+
+    # Time Series (Hypnogram)
+    hypnogram: List["SleepSegment"] = Field(default_factory=list, description="Secuencia de fases de sueño")
+
 
     model_config = {
         "extra": "ignore"  # Solo queremos los datos limpios definidos
