@@ -1,3 +1,8 @@
+"""
+Database models and Pydantic schemas for WeSleep.
+
+Defines the structure for Sleep Records, Smart Alarm requests, and internal data formats.
+"""
 from datetime import datetime
 from typing import Optional, Dict, Any, List
 from uuid import UUID, uuid4
@@ -135,6 +140,18 @@ class CleanSleepData(BaseModel):
 # --- Database Models ---
 
 class SleepRecord(SQLModel, table=True):
+    """
+    Database model for storing raw sleep data.
+
+    Attributes:
+        id: Unique identifier (UUID).
+        user_id: ID of the user who owns the record.
+        timestamp: Time when the record was created/received.
+        provider_source: Source of the data (e.g., 'apple_healthkit').
+        record_id_provider: External ID from the provider.
+        payload: Full raw JSON payload.
+        created_at: Database insertion timestamp.
+    """
     __tablename__ = "sleep_records"
 
     id: UUID = Field(default_factory=uuid4, primary_key=True)
@@ -154,14 +171,23 @@ class SleepRecord(SQLModel, table=True):
 # --- API Request/Response Models ---
 
 class WakeupPrediction(BaseModel):
+    """
+    Model representing the result of a smart alarm prediction.
+    """
     suggested_time: datetime
     confidence: float
     reasoning: str
 
 class SmartAlarmRequest(BaseModel):
+    """
+    Request payload for the smart alarm endpoint.
+    """
     sleep_record_id: UUID = Field(..., description="ID del registro de sueño a analizar")
     target_time: datetime = Field(..., description="Hora objetivo para despertar")
 
 class SmartAlarmResponse(WakeupPrediction):
+    """
+    Response payload for the smart alarm endpoint, including quality score.
+    """
     quality_score: float = Field(..., description="Puntuación de calidad del sueño (0-100)")
     anomalies: List[str] = Field(default_factory=list, description="Lista de anomalías detectadas")

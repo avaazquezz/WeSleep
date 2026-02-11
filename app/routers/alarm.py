@@ -1,3 +1,8 @@
+"""
+API endpoints for Smart Alarm functionality.
+
+Handles requests to predict the optimal wake-up time based on sleep cycles.
+"""
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
@@ -14,7 +19,21 @@ async def predict_smart_alarm(
     session: AsyncSession = Depends(get_session),
 ):
     """
-    Calcula la hora óptima para despertar basada en el ID del registro de sueño.
+    Predict optimal wake-up time.
+
+    Analyzes a specific Sleep Record to find the best time to wake up within
+    a 30-minute window before the target time.
+
+    Args:
+        request (SmartAlarmRequest): Target time and Sleep Record ID.
+        session (AsyncSession): Database session.
+
+    Returns:
+        SmartAlarmResponse: Suggested time, confidence, and sleep analysis.
+
+    Raises:
+        HTTPException(404): If the sleep record is not found.
+        HTTPException(500): If there is an error parsing the data.
     """
     # 1. Fetch raw data
     # SQLModel select style
