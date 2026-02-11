@@ -10,7 +10,7 @@ services:
     environment:
       - PROJECT_NAME=WeSleep
       - API_V1_STR=/api/v1
-      - SQLITE_URL=sqlite+aiosqlite:///dist/wesleep.db
+      - SQLITE_URL=sqlite+aiosqlite:////app/data/wesleep.db
     restart: unless-stopped
     healthcheck:
       test: [ "CMD", "curl", "-f", "http://localhost:8000/health" ]
