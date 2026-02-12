@@ -63,7 +63,7 @@ class WearableMetrics(BaseModel):
 
 class WearableRawPayload(BaseModel):
     """
-    Payload crudo recibido del proveedor (Apple HealthKit).
+    Payload crudo recibido del proveedor.
     """
     record_id: UUID = Field(..., description="Identificador único del registro en el proveedor")
     modified_at: datetime = Field(..., description="Timestamp de última modificación")

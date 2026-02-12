@@ -63,3 +63,4 @@ async def test_ingestion_and_smart_alarm():
             assert "suggested_time" in data
             assert "quality_score" in data
             assert "anomalies" in data
+            assert data["confidence"] > 0.0

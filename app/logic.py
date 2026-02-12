@@ -20,6 +20,80 @@ class DataParsingError(Exception):
     """Excepción lanzada cuando ocurre un error crítico al parsear los datos."""
     pass
 
+
+def _coerce_datetime(value: Any, field_name: str) -> datetime:
+    """Convierte un valor a datetime aceptando datetime o string ISO8601."""
+    if isinstance(value, datetime):
+        return value
+    if isinstance(value, str):
+        normalized = value.replace("Z", "+00:00")
+        try:
+            return datetime.fromisoformat(normalized)
+        except ValueError as e:
+            raise DataParsingError(f"Formato de fecha inválido en {field_name}: {value}") from e
+    raise DataParsingError(f"Tipo inválido para {field_name}: {type(value).__name__}")
+
+
+def _build_hypnogram_from_phase_durations(
+    start_at: datetime,
+    end_at: datetime,
+    metrics: Dict[str, Any],
+) -> List[SleepSegment]:
+    """
+    Construye un hipnograma aproximado a partir de duraciones por fase en ms.
+
+    Se usa como fallback cuando el proveedor no envía segmentos detallados.
+    """
+    phase_inputs = [
+        (SleepPhase.DEEP, metrics.get("sleep_duration_deep") or 0),
+        (SleepPhase.LIGHT, metrics.get("sleep_duration_light") or 0),
+        (SleepPhase.REM, metrics.get("sleep_duration_rem") or 0),
+        (SleepPhase.AWAKE, metrics.get("sleep_duration_awake") or 0),
+    ]
+
+    phase_durations_ms: List[tuple[SleepPhase, int]] = []
+    for phase, raw_value in phase_inputs:
+        if not isinstance(raw_value, (int, float)):
+            continue
+        duration_ms = int(raw_value)
+        if duration_ms > 0:
+            phase_durations_ms.append((phase, duration_ms))
+
+    if not phase_durations_ms:
+        return []
+
+    total_window_ms = max(int((end_at - start_at).total_seconds() * 1000), 0)
+    total_phase_ms = sum(duration for _, duration in phase_durations_ms)
+    if total_window_ms <= 0 or total_phase_ms <= 0:
+        return []
+
+    current_time = start_at
+    hypnogram: List[SleepSegment] = []
+
+    for index, (phase, duration_ms) in enumerate(phase_durations_ms):
+        if index == len(phase_durations_ms) - 1:
+            segment_end = end_at
+        else:
+            proportion = duration_ms / total_phase_ms
+            segment_duration_ms = int(total_window_ms * proportion)
+            segment_end = current_time + timedelta(milliseconds=segment_duration_ms)
+            if segment_end > end_at:
+                segment_end = end_at
+
+        if segment_end <= current_time:
+            continue
+
+        hypnogram.append(
+            SleepSegment(
+                start_at=current_time,
+                end_at=segment_end,
+                phase=phase,
+            )
+        )
+        current_time = segment_end
+
+    return hypnogram
+
 # --- Parser Logic ---
 
 def parse_sleep_payload(payload: Dict[str, Any]) -> CleanSleepData:
@@ -51,11 +125,20 @@ def parse_sleep_payload(payload: Dict[str, Any]) -> CleanSleepData:
         if interruptions is not None and isinstance(interruptions, (int, float)):
                 movimiento = min(float(interruptions) / 20.0, 1.0) # E.g. 20 interrupciones = 1.0 (mucho movimiento)
 
+        start_at = _coerce_datetime(payload["start_at_timestamp"], "start_at_timestamp")
+        end_at = _coerce_datetime(payload["end_at_timestamp"], "end_at_timestamp")
+
+        synthetic_hypnogram = _build_hypnogram_from_phase_durations(
+            start_at=start_at,
+            end_at=end_at,
+            metrics=metrics,
+        )
+
         # Construcción del diccionario para CleanSleepData
         clean_data_dict = {
             # Tiempos
-            "start_at_timestamp": payload["start_at_timestamp"],
-            "end_at_timestamp": payload["end_at_timestamp"],
+            "start_at_timestamp": start_at,
+            "end_at_timestamp": end_at,
             "duration": payload["duration"],
             
             # Métricas Cardíacas
@@ -77,6 +160,7 @@ def parse_sleep_payload(payload: Dict[str, Any]) -> CleanSleepData:
             "sleep_duration_light": metrics.get("sleep_duration_light") or 0,
             "sleep_duration_rem": metrics.get("sleep_duration_rem") or 0,
             "sleep_duration_awake": metrics.get("sleep_duration_awake") or 0,
+            "hypnogram": synthetic_hypnogram,
         }
         
         # 3. Creación y validación final del modelo Pydantic
@@ -156,6 +240,10 @@ def calculate_sleep_score(data: CleanSleepData) -> float:
 
     return round(score, 1)
 
+
+
+# --- Anomaly Detection Logic NO PRIORITARIO ---
+
 def detect_sleep_anomalies(data: CleanSleepData) -> List[str]:
     """
     Returns a list of anomaly tags.
@@ -198,7 +286,7 @@ def predict_optimal_wakeup(data: CleanSleepData, target_alarm_time: datetime) ->
     window_start = target_alarm_time - timedelta(minutes=WINDOW_MINUTES)
     window_end = target_alarm_time
 
-    # 1. Validar si tenemos hipnograma
+    # 1. Validar si tenemos hipnograma (HIPNOGRAMA: gráfico que representa las diferentes etapas del sueño a lo largo de una noche, mostrando la cronología y duración de cada fase)
     if not data.hypnogram:
         return WakeupPrediction(
             suggested_time=target_alarm_time,
