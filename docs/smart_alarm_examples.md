@@ -10,7 +10,7 @@ Primero, crea un sleep record con `POST /api/v1/wearable/ingest`, luego usa el `
 
 ```bash
 # Paso 1: Ingestar datos de sueño
-curl -X POST http://localhost:8000/api/v1/wearable/ingest \
+curl -X POST http://localhost:8000/api/v1/webhooks/wearable/ \
   -H "Content-Type: application/json" \
   -H "X-User-ID: 11111111-1111-1111-1111-111111111111" \
   -d '{
@@ -38,7 +38,7 @@ curl -X POST http://localhost:8000/api/v1/wearable/ingest \
   }'
 
 # Paso 2: Smart Alarm (usar el ID devuelto en step 1)
-curl -X POST http://localhost:8000/api/v1/smart-alarm \
+curl -X POST http://localhost:8000/api/v1/sleep/smart-alarm \
   -H "Content-Type: application/json" \
   -d '{
     "sleep_record_id": "<ID_FROM_STEP_1>",
@@ -54,7 +54,7 @@ curl -X POST http://localhost:8000/api/v1/smart-alarm \
 ## 2. Durmiente Estresado — HRV bajo, noche agitada
 
 ```bash
-curl -X POST http://localhost:8000/api/v1/wearable/ingest \
+curl -X POST http://localhost:8000/api/v1/webhooks/wearable/ \
   -H "Content-Type: application/json" \
   -H "X-User-ID: 22222222-2222-2222-2222-222222222222" \
   -d '{
@@ -81,7 +81,7 @@ curl -X POST http://localhost:8000/api/v1/wearable/ingest \
     "provider_slug": "apple"
   }'
 
-curl -X POST http://localhost:8000/api/v1/smart-alarm \
+curl -X POST http://localhost:8000/api/v1/sleep/smart-alarm \
   -H "Content-Type: application/json" \
   -d '{
     "sleep_record_id": "<ID_FROM_STEP_1>",
@@ -97,7 +97,7 @@ curl -X POST http://localhost:8000/api/v1/smart-alarm \
 ## 3. Posible Apnea — SpO2 crítico
 
 ```bash
-curl -X POST http://localhost:8000/api/v1/wearable/ingest \
+curl -X POST http://localhost:8000/api/v1/webhooks/wearable/ \
   -H "Content-Type: application/json" \
   -H "X-User-ID: 33333333-3333-3333-3333-333333333333" \
   -d '{
@@ -124,7 +124,7 @@ curl -X POST http://localhost:8000/api/v1/wearable/ingest \
     "provider_slug": "apple"
   }'
 
-curl -X POST http://localhost:8000/api/v1/smart-alarm \
+curl -X POST http://localhost:8000/api/v1/sleep/smart-alarm \
   -H "Content-Type: application/json" \
   -d '{
     "sleep_record_id": "<ID_FROM_STEP_1>",
@@ -140,7 +140,7 @@ curl -X POST http://localhost:8000/api/v1/smart-alarm \
 ## 4. Atleta Recuperado — Métricas excelentes
 
 ```bash
-curl -X POST http://localhost:8000/api/v1/wearable/ingest \
+curl -X POST http://localhost:8000/api/v1/webhooks/wearable/ \
   -H "Content-Type: application/json" \
   -H "X-User-ID: 44444444-4444-4444-4444-444444444444" \
   -d '{
@@ -167,7 +167,7 @@ curl -X POST http://localhost:8000/api/v1/wearable/ingest \
     "provider_slug": "apple"
   }'
 
-curl -X POST http://localhost:8000/api/v1/smart-alarm \
+curl -X POST http://localhost:8000/api/v1/sleep/smart-alarm \
   -H "Content-Type: application/json" \
   -d '{
     "sleep_record_id": "<ID_FROM_STEP_1>",
@@ -183,7 +183,7 @@ curl -X POST http://localhost:8000/api/v1/smart-alarm \
 ## 5. Durmiente con datos mínimos — Sin métricas opcionales
 
 ```bash
-curl -X POST http://localhost:8000/api/v1/wearable/ingest \
+curl -X POST http://localhost:8000/api/v1/webhooks/wearable/ \
   -H "Content-Type: application/json" \
   -H "X-User-ID: 55555555-5555-5555-5555-555555555555" \
   -d '{
