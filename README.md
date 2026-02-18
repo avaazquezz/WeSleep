@@ -14,7 +14,7 @@ WeSleep/
 │   │   ├── deps.py          # API Dependencies (DB Session)
 │   │   └── wearable.py      # Raw Data Ingestion endpoints
 │   ├── services/            # External Service Integrations
-│   │   └── gemini_service.py # Google Gemini AI — personalized sleep reasoning
+│   │   └── reasoning_service.py # Google Gemini AI — personalized sleep reasoning
 │   ├── config.py            # Environment Configuration (Pydantic)
 │   ├── database.py          # Database Connection (Async SQLite)
 │   ├── logic.py             # Core Business Logic (Parsing, Scoring, Algorithms)
@@ -75,9 +75,9 @@ Normalized view of the sleep data used for analysis.
 | `SpO2` | Blood Oxygen Saturation (Avg, Min, Max). <90% triggers apnea warning. |
 | `movimiento` | Normalized movement index (0-1). |
 
-## 🤖 Gemini AI Integration
+## 🤖 AI Reasoning — Groq + Llama 3.3 70B
 
-The Smart Alarm uses **Google Gemini** to generate professional, personalized sleep analyses. Each response includes a 3-4 line reasoning in Spanish that considers:
+The Smart Alarm uses **Groq** (100% free) with **Llama 3.3 70B** to generate professional, personalized sleep analyses. Each response includes a 3-4 line reasoning in Spanish that considers:
 
 - Sleep duration & efficiency
 - HRV and heart rate patterns
@@ -85,7 +85,9 @@ The Smart Alarm uses **Google Gemini** to generate professional, personalized sl
 - Detected anomalies (apnea, fragmentation)
 - Sleep architecture (deep/light/REM ratios)
 
-**Fallback**: If `GEMINI_API_KEY` is not set or the API call fails, the system gracefully falls back to the original heuristic reasoning — no functionality is lost.
+**Why Groq?** Free tier (30 RPM, 14,400 RPD), fastest inference (~500 tokens/sec), and Llama 3.3 70B rivals GPT-4 on reasoning.
+
+**Fallback**: If `GROQ_API_KEY` is not set or the API call fails, the system gracefully falls back to the original heuristic reasoning — no functionality is lost.
 
 See [`docs/smart_alarm_examples.md`](docs/smart_alarm_examples.md) for 5 ready-to-use cURL examples.
 
@@ -95,7 +97,7 @@ See [`docs/smart_alarm_examples.md`](docs/smart_alarm_examples.md) for 5 ready-t
     ```bash
     cp .env.example .env
     # Edit .env with your config:
-    #   GEMINI_API_KEY=your-google-ai-api-key  (optional, enables AI reasoning)
+    #   GROQ_API_KEY=your-groq-api-key  (free at https://console.groq.com)
     ```
 
 2.  **Run with Docker**

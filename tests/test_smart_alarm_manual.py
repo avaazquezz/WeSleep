@@ -28,8 +28,8 @@ async def test_heuristic_alarm():
     )
 
     # Disable Gemini for all sub-tests so we get pure heuristic reasoning
-    with patch("app.services.gemini_service.settings") as ms:
-        ms.GEMINI_API_KEY = ""
+    with patch("app.services.reasoning_service.settings") as ms:
+        ms.GROQ_API_KEY = ""
 
         # Test 1: No Hypnogram → returns target time
         pred = await logic.predict_optimal_wakeup(base_data, target_time)

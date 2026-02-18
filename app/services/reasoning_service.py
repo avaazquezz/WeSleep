@@ -1,26 +1,30 @@
 """
-Gemini AI service for generating personalized sleep analysis reasoning.
+AI service for generating personalized sleep analysis reasoning.
 
-This service encapsulates all interaction with the Google Gemini API
-via the modern `google-genai` SDK.
+Uses Groq's free API with Llama 3.3 70B — the highest quality
+open-source model available, with the fastest inference on the market.
 
-Fallback strategy: if Gemini is unavailable or the API key is not set,
+Fallback strategy: if Groq is unavailable or the API key is not set,
 the function silently returns the heuristic reasoning so the Smart Alarm
 feature continues to work without interruption.
+
+Why Groq + Llama 3.3 70B:
+  - 100% free tier (30 RPM, 14,400 RPD, 6,000 tokens/min)
+  - Llama 3.3 70B quality rivals GPT-4 on reasoning tasks
+  - Groq's LPU delivers ~500 tokens/sec — real-time responses
 """
 import logging
 from typing import List
 
-from google import genai
-from google.genai import types
+from groq import AsyncGroq
 
 from app.config import settings
 from app.models import CleanSleepData
 
 logger = logging.getLogger(__name__)
 
-# Gemini model — flash is the fastest and cheapest option
-_GEMINI_MODEL = "gemini-2.0-flash"
+# Llama 3.3 70B — best open-source model for reasoning tasks
+_MODEL = "llama-3.3-70b-versatile"
 
 
 def _build_sleep_analysis_prompt(
@@ -31,9 +35,9 @@ def _build_sleep_analysis_prompt(
     heuristic_reason: str,
 ) -> str:
     """
-    Construye el prompt que se envía a Gemini con todos los datos del sueño.
+    Construye el prompt que se envía a Llama con todos los datos del sueño.
 
-    El prompt está diseñado para que Gemini actúe como un especialista en
+    El prompt está diseñado para que el modelo actúe como un especialista en
     medicina del sueño y genere un análisis conciso, profesional y
     personalizado basado en los datos biométricos reales del usuario.
     """
@@ -81,7 +85,7 @@ async def generate_sleep_reasoning(
     heuristic_reason: str,
 ) -> str:
     """
-    Genera un análisis personalizado del sueño usando Gemini.
+    Genera un análisis personalizado del sueño usando Groq + Llama 3.3 70B.
 
     Si la API key no está configurada o la llamada falla, retorna
     el reasoning heurístico como fallback silencioso.
@@ -96,12 +100,12 @@ async def generate_sleep_reasoning(
     Returns:
         Análisis personalizado de 3-4 líneas o el heuristic_reason si falla.
     """
-    if not settings.GEMINI_API_KEY:
-        logger.info("GEMINI_API_KEY no configurada — usando reasoning heurístico")
+    if not settings.GROQ_API_KEY:
+        logger.info("GROQ_API_KEY no configurada — usando reasoning heurístico")
         return heuristic_reason
 
     try:
-        client = genai.Client(api_key=settings.GEMINI_API_KEY)
+        client = AsyncGroq(api_key=settings.GROQ_API_KEY)
 
         prompt = _build_sleep_analysis_prompt(
             data=data,
@@ -111,23 +115,27 @@ async def generate_sleep_reasoning(
             heuristic_reason=heuristic_reason,
         )
 
-        response = await client.aio.models.generate_content(
-            model=_GEMINI_MODEL,
-            contents=prompt,
-            config=types.GenerateContentConfig(
-                temperature=0.7,
-                max_output_tokens=300,
-            ),
+        response = await client.chat.completions.create(
+            model=_MODEL,
+            messages=[
+                {
+                    "role": "system",
+                    "content": "Eres un especialista en medicina del sueño. Respondes siempre en español con análisis concisos y profesionales.",
+                },
+                {"role": "user", "content": prompt},
+            ],
+            temperature=0.7,
+            max_completion_tokens=300,
         )
 
-        generated_text = response.text.strip() if response.text else ""
+        generated_text = response.choices[0].message.content.strip() if response.choices else ""
 
         if not generated_text:
-            logger.warning("Gemini retornó respuesta vacía — fallback a heurístico")
+            logger.warning("Groq retornó respuesta vacía — fallback a heurístico")
             return heuristic_reason
 
         return generated_text
 
     except Exception as exc:
-        logger.error("Error al llamar a Gemini API: %s", exc, exc_info=True)
+        logger.error("Error al llamar a Groq API: %s", exc, exc_info=True)
         return heuristic_reason

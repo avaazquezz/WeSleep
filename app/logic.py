@@ -349,7 +349,7 @@ async def predict_optimal_wakeup(
         reason = f"HRV normal. Se optimiza duración de sueño despertando en fase ligera/despierto a las {best_time.strftime('%H:%M')}."
 
     # Enriquecer reasoning con Gemini AI (fallback silencioso al heurístico)
-    from app.services.gemini_service import generate_sleep_reasoning
+    from app.services.reasoning_service import generate_sleep_reasoning
     enriched_reasoning = await generate_sleep_reasoning(
         data=data,
         quality_score=quality_score,

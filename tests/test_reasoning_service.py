@@ -1,9 +1,9 @@
 """
-Exhaustive test suite for the Gemini reasoning integration.
+Exhaustive test suite for the Groq/Llama reasoning integration.
 
 Tests cover:
 - gemini_service: prompt building, API call with mock, fallback on errors
-- predict_optimal_wakeup: async behavior, Gemini integration, edge cases
+- predict_optimal_wakeup: async behavior, Groq integration, edge cases
 """
 import asyncio
 import sys
@@ -18,7 +18,7 @@ import pytest
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from app.models import CleanSleepData, SleepSegment, SleepPhase, WakeupPrediction
-from app.services.gemini_service import (
+from app.services.reasoning_service import (
     _build_sleep_analysis_prompt,
     generate_sleep_reasoning,
 )
@@ -90,6 +90,19 @@ def _make_clean_data(
     )
 
 
+def _make_groq_response(text: str) -> MagicMock:
+    """Build a mock Groq ChatCompletion response."""
+    mock_message = MagicMock()
+    mock_message.content = text
+
+    mock_choice = MagicMock()
+    mock_choice.message = mock_message
+
+    mock_response = MagicMock()
+    mock_response.choices = [mock_choice]
+    return mock_response
+
+
 # ──────────────────────────────────────────────
 # 1. PROMPT BUILDING TESTS
 # ──────────────────────────────────────────────
@@ -156,7 +169,7 @@ class TestBuildSleepAnalysisPrompt:
         assert "N/D" in prompt
 
     def test_prompt_contains_instructions(self):
-        """Prompt must include key instruction words for Gemini."""
+        """Prompt must include key instruction words for the model."""
         data = _make_clean_data()
         prompt = _build_sleep_analysis_prompt(
             data=data,
@@ -170,7 +183,7 @@ class TestBuildSleepAnalysisPrompt:
         assert "español" in prompt.lower()
 
     def test_prompt_includes_heuristic_reason(self):
-        """The heuristic analysis should be passed to Gemini for context."""
+        """The heuristic analysis should be passed as context."""
         data = _make_clean_data()
         heuristic = "HRV bajo (30ms). Se prioriza despertar temprano."
         prompt = _build_sleep_analysis_prompt(
@@ -184,18 +197,18 @@ class TestBuildSleepAnalysisPrompt:
 
 
 # ──────────────────────────────────────────────
-# 2. GEMINI SERVICE TESTS (generate_sleep_reasoning)
+# 2. GROQ SERVICE TESTS (generate_sleep_reasoning)
 # ──────────────────────────────────────────────
 
 class TestGenerateSleepReasoning:
-    """Tests for generate_sleep_reasoning — mocked Gemini API."""
+    """Tests for generate_sleep_reasoning — mocked Groq API."""
 
     @pytest.mark.asyncio
     async def test_fallback_when_no_api_key(self):
         """Without API key, must return heuristic reasoning."""
         heuristic = "HRV normal. Despertando en fase ligera."
-        with patch("app.services.gemini_service.settings") as mock_settings:
-            mock_settings.GEMINI_API_KEY = ""
+        with patch("app.services.reasoning_service.settings") as mock_settings:
+            mock_settings.GROQ_API_KEY = ""
             result = await generate_sleep_reasoning(
                 data=_make_clean_data(),
                 quality_score=80.0,
@@ -206,26 +219,24 @@ class TestGenerateSleepReasoning:
         assert result == heuristic
 
     @pytest.mark.asyncio
-    async def test_returns_gemini_text_on_success(self):
-        """When Gemini API succeeds, return its generated text."""
-        gemini_text = (
+    async def test_returns_groq_text_on_success(self):
+        """When Groq API succeeds, return its generated text."""
+        groq_text = (
             "Tu sueño profundo del 20% es adecuado y tu HRV de 60ms refleja "
             "buena recuperación. Se recomienda despertar a las 06:55 en fase ligera "
             "para minimizar la inercia del sueño."
         )
-        mock_response = MagicMock()
-        mock_response.text = gemini_text
-
-        mock_aio_models = MagicMock()
-        mock_aio_models.generate_content = AsyncMock(return_value=mock_response)
-        mock_aio = MagicMock()
-        mock_aio.models = mock_aio_models
+        mock_response = _make_groq_response(groq_text)
+        mock_completions = MagicMock()
+        mock_completions.create = AsyncMock(return_value=mock_response)
+        mock_chat = MagicMock()
+        mock_chat.completions = mock_completions
         mock_client = MagicMock()
-        mock_client.aio = mock_aio
+        mock_client.chat = mock_chat
 
-        with patch("app.services.gemini_service.settings") as mock_settings, \
-             patch("app.services.gemini_service.genai.Client", return_value=mock_client):
-            mock_settings.GEMINI_API_KEY = "test-key-123"
+        with patch("app.services.reasoning_service.settings") as mock_settings, \
+             patch("app.services.reasoning_service.AsyncGroq", return_value=mock_client):
+            mock_settings.GROQ_API_KEY = "test-key-123"
 
             result = await generate_sleep_reasoning(
                 data=_make_clean_data(),
@@ -235,25 +246,25 @@ class TestGenerateSleepReasoning:
                 heuristic_reason="fallback text",
             )
 
-        assert result == gemini_text
+        assert result == groq_text
 
     @pytest.mark.asyncio
     async def test_fallback_on_api_exception(self):
-        """On any Gemini API error, gracefully fall back to heuristic."""
+        """On any Groq API error, gracefully fall back to heuristic."""
         heuristic = "Fallback: HRV bajo."
 
-        mock_aio_models = MagicMock()
-        mock_aio_models.generate_content = AsyncMock(
+        mock_completions = MagicMock()
+        mock_completions.create = AsyncMock(
             side_effect=Exception("API quota exceeded")
         )
-        mock_aio = MagicMock()
-        mock_aio.models = mock_aio_models
+        mock_chat = MagicMock()
+        mock_chat.completions = mock_completions
         mock_client = MagicMock()
-        mock_client.aio = mock_aio
+        mock_client.chat = mock_chat
 
-        with patch("app.services.gemini_service.settings") as mock_settings, \
-             patch("app.services.gemini_service.genai.Client", return_value=mock_client):
-            mock_settings.GEMINI_API_KEY = "test-key-123"
+        with patch("app.services.reasoning_service.settings") as mock_settings, \
+             patch("app.services.reasoning_service.AsyncGroq", return_value=mock_client):
+            mock_settings.GROQ_API_KEY = "test-key-123"
 
             result = await generate_sleep_reasoning(
                 data=_make_clean_data(),
@@ -267,21 +278,19 @@ class TestGenerateSleepReasoning:
 
     @pytest.mark.asyncio
     async def test_fallback_on_empty_response(self):
-        """If Gemini returns empty text, fall back to heuristic."""
+        """If Groq returns empty text, fall back to heuristic."""
         heuristic = "HRV normal. Optimiza duración."
-        mock_response = MagicMock()
-        mock_response.text = "   "
-
-        mock_aio_models = MagicMock()
-        mock_aio_models.generate_content = AsyncMock(return_value=mock_response)
-        mock_aio = MagicMock()
-        mock_aio.models = mock_aio_models
+        mock_response = _make_groq_response("   ")
+        mock_completions = MagicMock()
+        mock_completions.create = AsyncMock(return_value=mock_response)
+        mock_chat = MagicMock()
+        mock_chat.completions = mock_completions
         mock_client = MagicMock()
-        mock_client.aio = mock_aio
+        mock_client.chat = mock_chat
 
-        with patch("app.services.gemini_service.settings") as mock_settings, \
-             patch("app.services.gemini_service.genai.Client", return_value=mock_client):
-            mock_settings.GEMINI_API_KEY = "test-key"
+        with patch("app.services.reasoning_service.settings") as mock_settings, \
+             patch("app.services.reasoning_service.AsyncGroq", return_value=mock_client):
+            mock_settings.GROQ_API_KEY = "test-key"
 
             result = await generate_sleep_reasoning(
                 data=_make_clean_data(),
@@ -295,18 +304,18 @@ class TestGenerateSleepReasoning:
 
 
 # ──────────────────────────────────────────────
-# 3. PREDICT_OPTIMAL_WAKEUP (async, con Gemini mock)
+# 3. PREDICT_OPTIMAL_WAKEUP (async, con Groq mock)
 # ──────────────────────────────────────────────
 
 class TestPredictOptimalWakeup:
-    """Tests for predict_optimal_wakeup with mocked Gemini."""
+    """Tests for predict_optimal_wakeup with mocked Groq."""
 
     @pytest.mark.asyncio
     async def test_no_hypnogram_returns_target_time(self):
         """Without hypnogram, return target time with zero confidence."""
         data = _make_clean_data(hypnogram=[])
-        with patch("app.services.gemini_service.settings") as ms:
-            ms.GEMINI_API_KEY = ""
+        with patch("app.services.reasoning_service.settings") as ms:
+            ms.GROQ_API_KEY = ""
             pred = await logic.predict_optimal_wakeup(data, TARGET_TIME)
 
         assert pred.suggested_time == TARGET_TIME
@@ -322,8 +331,8 @@ class TestPredictOptimalWakeup:
             phase=SleepPhase.DEEP,
         )
         data = _make_clean_data(hypnogram=[deep_seg])
-        with patch("app.services.gemini_service.settings") as ms:
-            ms.GEMINI_API_KEY = ""
+        with patch("app.services.reasoning_service.settings") as ms:
+            ms.GROQ_API_KEY = ""
             pred = await logic.predict_optimal_wakeup(data, TARGET_TIME)
 
         assert pred.suggested_time == TARGET_TIME
@@ -344,8 +353,8 @@ class TestPredictOptimalWakeup:
         )
         data = _make_clean_data(hrv=60.0, hypnogram=[s1, s2])
 
-        with patch("app.services.gemini_service.settings") as ms:
-            ms.GEMINI_API_KEY = ""
+        with patch("app.services.reasoning_service.settings") as ms:
+            ms.GROQ_API_KEY = ""
             pred = await logic.predict_optimal_wakeup(data, TARGET_TIME)
 
         # Latest valid slot is 07:00 (or close to it)
@@ -367,16 +376,16 @@ class TestPredictOptimalWakeup:
         )
         data = _make_clean_data(hrv=30.0, hypnogram=[s1, s2])
 
-        with patch("app.services.gemini_service.settings") as ms:
-            ms.GEMINI_API_KEY = ""
+        with patch("app.services.reasoning_service.settings") as ms:
+            ms.GROQ_API_KEY = ""
             pred = await logic.predict_optimal_wakeup(data, TARGET_TIME)
 
         # Earliest non-deep slot starts at T-15min = 06:45
         assert pred.suggested_time.minute == 45
 
     @pytest.mark.asyncio
-    async def test_gemini_enriches_reasoning_when_api_key_set(self):
-        """When Gemini API key is set, reasoning should be enriched text."""
+    async def test_groq_enriches_reasoning_when_api_key_set(self):
+        """When Groq API key is set, reasoning should be enriched text."""
         enriched = "Tu HRV de 60ms indica recuperación adecuada. Despertar a las 06:55."
 
         s = SleepSegment(
@@ -386,18 +395,17 @@ class TestPredictOptimalWakeup:
         )
         data = _make_clean_data(hrv=60.0, hypnogram=[s])
 
-        mock_response = MagicMock()
-        mock_response.text = enriched
-        mock_aio_models = MagicMock()
-        mock_aio_models.generate_content = AsyncMock(return_value=mock_response)
-        mock_aio = MagicMock()
-        mock_aio.models = mock_aio_models
+        mock_response = _make_groq_response(enriched)
+        mock_completions = MagicMock()
+        mock_completions.create = AsyncMock(return_value=mock_response)
+        mock_chat = MagicMock()
+        mock_chat.completions = mock_completions
         mock_client = MagicMock()
-        mock_client.aio = mock_aio
+        mock_client.chat = mock_chat
 
-        with patch("app.services.gemini_service.settings") as ms, \
-             patch("app.services.gemini_service.genai.Client", return_value=mock_client):
-            ms.GEMINI_API_KEY = "real-key"
+        with patch("app.services.reasoning_service.settings") as ms, \
+             patch("app.services.reasoning_service.AsyncGroq", return_value=mock_client):
+            ms.GROQ_API_KEY = "real-key"
 
             pred = await logic.predict_optimal_wakeup(
                 data, TARGET_TIME, quality_score=80.0, anomalies=[]
@@ -415,8 +423,8 @@ class TestPredictOptimalWakeup:
         )
         data = _make_clean_data(hypnogram=[s])
 
-        with patch("app.services.gemini_service.settings") as ms:
-            ms.GEMINI_API_KEY = ""
+        with patch("app.services.reasoning_service.settings") as ms:
+            ms.GROQ_API_KEY = ""
             pred = await logic.predict_optimal_wakeup(data, TARGET_TIME)
 
         assert isinstance(pred, WakeupPrediction)
@@ -435,8 +443,8 @@ class TestPredictOptimalWakeup:
         )
         data = _make_clean_data(hypnogram=[s])
 
-        with patch("app.services.gemini_service.settings") as ms:
-            ms.GEMINI_API_KEY = ""
+        with patch("app.services.reasoning_service.settings") as ms:
+            ms.GROQ_API_KEY = ""
             pred = await logic.predict_optimal_wakeup(data, TARGET_TIME)
 
         assert pred.suggested_time == TARGET_TIME
@@ -453,24 +461,21 @@ class TestPredictOptimalWakeup:
         data = _make_clean_data(hypnogram=[s])
         naive_target = datetime(2025, 4, 30, 7, 0, 0)  # No tzinfo
 
-        with patch("app.services.gemini_service.settings") as ms:
-            ms.GEMINI_API_KEY = ""
+        with patch("app.services.reasoning_service.settings") as ms:
+            ms.GROQ_API_KEY = ""
             pred = await logic.predict_optimal_wakeup(data, naive_target)
 
         # Should not crash — timezone is assigned internally
         assert pred.suggested_time is not None
 
     @pytest.mark.asyncio
-    async def test_quality_score_and_anomalies_passed_to_gemini(self):
-        """Verify that quality_score and anomalies reach the Gemini prompt."""
-        captured_prompt = {}
+    async def test_quality_score_and_anomalies_passed_to_groq(self):
+        """Verify that quality_score and anomalies reach the prompt."""
+        captured_kwargs = {}
 
-        async def capture_prompt(*args, **kwargs):
-            # The prompt is passed as the `contents` kwarg
-            captured_prompt["text"] = kwargs.get("contents", args[0] if args else "")
-            mock_resp = MagicMock()
-            mock_resp.text = "Análisis generado."
-            return mock_resp
+        async def capture_create(**kwargs):
+            captured_kwargs.update(kwargs)
+            return _make_groq_response("Análisis generado.")
 
         s = SleepSegment(
             start_at=TARGET_TIME - timedelta(minutes=40),
@@ -479,16 +484,16 @@ class TestPredictOptimalWakeup:
         )
         data = _make_clean_data(hrv=60.0, hypnogram=[s])
 
-        mock_aio_models = MagicMock()
-        mock_aio_models.generate_content = capture_prompt
-        mock_aio = MagicMock()
-        mock_aio.models = mock_aio_models
+        mock_completions = MagicMock()
+        mock_completions.create = capture_create
+        mock_chat = MagicMock()
+        mock_chat.completions = mock_completions
         mock_client = MagicMock()
-        mock_client.aio = mock_aio
+        mock_client.chat = mock_chat
 
-        with patch("app.services.gemini_service.settings") as ms, \
-             patch("app.services.gemini_service.genai.Client", return_value=mock_client):
-            ms.GEMINI_API_KEY = "key-123"
+        with patch("app.services.reasoning_service.settings") as ms, \
+             patch("app.services.reasoning_service.AsyncGroq", return_value=mock_client):
+            ms.GROQ_API_KEY = "key-123"
 
             await logic.predict_optimal_wakeup(
                 data, TARGET_TIME,
@@ -496,8 +501,10 @@ class TestPredictOptimalWakeup:
                 anomalies=["Posible Apnea (SpO2 Min: 88.0)"],
             )
 
-        assert "67.3" in captured_prompt["text"]
-        assert "Posible Apnea" in captured_prompt["text"]
+        # The user message is the second in the messages list
+        user_message = captured_kwargs["messages"][1]["content"]
+        assert "67.3" in user_message
+        assert "Posible Apnea" in user_message
 
 
 # ──────────────────────────────────────────────
@@ -505,7 +512,7 @@ class TestPredictOptimalWakeup:
 # ──────────────────────────────────────────────
 
 class TestEndToEndFlow:
-    """Full pipeline: score → anomalies → predict (with mocked Gemini)."""
+    """Full pipeline: score → anomalies → predict (with mocked Groq)."""
 
     @pytest.mark.asyncio
     async def test_full_pipeline_healthy_sleeper(self):
@@ -520,8 +527,8 @@ class TestEndToEndFlow:
         assert score > 70, f"Healthy sleeper should have high score, got {score}"
         assert len(anomalies) == 0
 
-        with patch("app.services.gemini_service.settings") as ms:
-            ms.GEMINI_API_KEY = ""
+        with patch("app.services.reasoning_service.settings") as ms:
+            ms.GROQ_API_KEY = ""
             pred = await logic.predict_optimal_wakeup(
                 data, TARGET_TIME, quality_score=score, anomalies=anomalies
             )
@@ -553,8 +560,8 @@ class TestEndToEndFlow:
         assert score < 80, f"Poor sleeper should have below-average score, got {score}"
         assert any("Apnea" in a for a in anomalies)
 
-        with patch("app.services.gemini_service.settings") as ms:
-            ms.GEMINI_API_KEY = ""
+        with patch("app.services.reasoning_service.settings") as ms:
+            ms.GROQ_API_KEY = ""
             pred = await logic.predict_optimal_wakeup(
                 data, TARGET_TIME, quality_score=score, anomalies=anomalies
             )
