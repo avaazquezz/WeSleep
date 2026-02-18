@@ -19,6 +19,9 @@ class Settings(BaseSettings):
     
     # Database
     SQLITE_URL: str = "sqlite+aiosqlite:///./wesleep.db"
+
+    # Gemini AI — se usa para generar reasoning personalizado en Smart Alarm
+    GEMINI_API_KEY: str = ""
     
     model_config = SettingsConfigDict(
         env_file=".env",
