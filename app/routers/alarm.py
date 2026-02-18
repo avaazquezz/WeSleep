@@ -50,12 +50,17 @@ async def predict_smart_alarm(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error parsing sleep data: {str(e)}")
 
-    # 3. Calculate wakeup window
-    prediction = logic.predict_optimal_wakeup(clean_data, request.target_time)
-    
-    # 4. Calculate sleep quality and anomalies
+    # 3. Calculate sleep quality and anomalies (needed by Gemini reasoning)
     quality_score = logic.calculate_sleep_score(clean_data)
     anomalies = logic.detect_sleep_anomalies(clean_data)
+
+    # 4. Calculate wakeup window (async — calls Gemini for personalized reasoning)
+    prediction = await logic.predict_optimal_wakeup(
+        clean_data,
+        request.target_time,
+        quality_score=quality_score,
+        anomalies=anomalies,
+    )
 
     return SmartAlarmResponse(
         suggested_time=prediction.suggested_time,

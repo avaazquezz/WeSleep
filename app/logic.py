@@ -272,7 +272,12 @@ def detect_sleep_anomalies(data: CleanSleepData) -> List[str]:
 
 # --- Smart Alarm Logic ---
 
-def predict_optimal_wakeup(data: CleanSleepData, target_alarm_time: datetime) -> WakeupPrediction:
+async def predict_optimal_wakeup(
+    data: CleanSleepData,
+    target_alarm_time: datetime,
+    quality_score: float = 0.0,
+    anomalies: Optional[List[str]] = None,
+) -> WakeupPrediction:
     """
     Estrategia v1: Heurística basada en fases de sueño y HRV.
     """
@@ -343,8 +348,18 @@ def predict_optimal_wakeup(data: CleanSleepData, target_alarm_time: datetime) ->
         best_time = valid_slots[-1]
         reason = f"HRV normal. Se optimiza duración de sueño despertando en fase ligera/despierto a las {best_time.strftime('%H:%M')}."
 
+    # Enriquecer reasoning con Gemini AI (fallback silencioso al heurístico)
+    from app.services.reasoning_service import generate_sleep_reasoning
+    enriched_reasoning = await generate_sleep_reasoning(
+        data=data,
+        quality_score=quality_score,
+        anomalies=anomalies or [],
+        suggested_time_str=best_time.strftime("%H:%M"),
+        heuristic_reason=reason,
+    )
+
     return WakeupPrediction(
         suggested_time=best_time,
         confidence=0.9,
-        reasoning=reason
+        reasoning=enriched_reasoning
     )

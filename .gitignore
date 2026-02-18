@@ -156,3 +156,4 @@ cython_debug/
 
 # VSCode
 .vscode/
+wesleep.db

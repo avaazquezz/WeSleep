@@ -19,6 +19,9 @@ class Settings(BaseSettings):
     
     # Database
     SQLITE_URL: str = "sqlite+aiosqlite:///./wesleep.db"
+
+    # Groq AI — Llama 3.3 70B para reasoning personalizado en Smart Alarm
+    GROQ_API_KEY: str = ""
     
     model_config = SettingsConfigDict(
         env_file=".env",
