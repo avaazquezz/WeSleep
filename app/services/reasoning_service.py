@@ -50,29 +50,29 @@ def _build_sleep_analysis_prompt(
     anomalies_text = ", ".join(anomalies) if anomalies else "Ninguna detectada"
 
     prompt = f"""Eres un especialista en medicina del sueño con 20 años de experiencia clínica.
-Analiza los siguientes datos biométricos de sueño de un usuario y genera un breve análisis
-personalizado de EXACTAMENTE 3-4 líneas.
+        Analiza los siguientes datos biométricos de sueño de un usuario y genera un breve análisis
+        personalizado de EXACTAMENTE 3-4 líneas.
 
-DATOS DEL SUEÑO:
-- Duración total: {total_hours} horas
-- Distribución de fases: Profundo {deep_pct}%, Ligero {light_pct}%, REM {rem_pct}%, Despierto {awake_pct}%
-- Frecuencia cardíaca media: {data.media_HR or 'N/D'} bpm
-- HRV (SDNN): {data.HRV or 'N/D'} ms
-- SpO2 promedio: {data.SpO2 or 'N/D'}% | SpO2 mínimo: {data.SpO2_min or 'N/D'}%
-- Frecuencia respiratoria: {data.breathing_rate or 'N/D'} rpm
-- Índice de movimiento: {data.movimiento or 'N/D'}
-- Puntuación de calidad: {quality_score}/100
-- Anomalías detectadas: {anomalies_text}
-- Hora sugerida de despertar: {suggested_time_str}
-- Análisis heurístico: {heuristic_reason}
+        DATOS DEL SUEÑO:
+        - Duración total: {total_hours} horas
+        - Distribución de fases: Profundo {deep_pct}%, Ligero {light_pct}%, REM {rem_pct}%, Despierto {awake_pct}%
+        - Frecuencia cardíaca media: {data.media_HR or 'N/D'} bpm
+        - HRV (SDNN): {data.HRV or 'N/D'} ms
+        - SpO2 promedio: {data.SpO2 or 'N/D'}% | SpO2 mínimo: {data.SpO2_min or 'N/D'}%
+        - Frecuencia respiratoria: {data.breathing_rate or 'N/D'} rpm
+        - Índice de movimiento: {data.movimiento or 'N/D'}
+        - Puntuación de calidad: {quality_score}/100
+        - Anomalías detectadas: {anomalies_text}
+        - Hora sugerida de despertar: {suggested_time_str}
+        - Análisis heurístico: {heuristic_reason}
 
-INSTRUCCIONES:
-1. Escribe en español profesional, en segunda persona (tuteo).
-2. Menciona datos concretos del usuario (ej: "tu HRV de 45ms indica...").
-3. Explica POR QUÉ se sugiere esa hora de despertar basándote en las fases.
-4. Si hay anomalías, menciónalas brevemente con recomendación.
-5. Sé conciso: MÁXIMO 4 líneas. Sin saludos ni despedidas.
-6. No uses markdown, listas, ni bullet points. Solo texto corrido."""
+        INSTRUCCIONES:
+        1. Escribe en español profesional, en segunda persona (tuteo).
+        2. Menciona datos concretos del usuario (ej: "tu HRV de 45ms indica...").
+        3. Explica POR QUÉ se sugiere esa hora de despertar basándote en las fases.
+        4. Si hay anomalías, menciónalas brevemente con recomendación.
+        5. Sé conciso: MÁXIMO 4 líneas. Sin saludos ni despedidas.
+        6. No uses markdown, listas, ni bullet points. Solo texto corrido."""
 
     return prompt
 

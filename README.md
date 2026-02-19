@@ -1,115 +1,65 @@
-# WeSleep - Smart Alarm Backend
+# WeSleep — L'Alarma Intel·ligent i Assistent de Son Preventiu
 
-Backend API for the WeSleep smart alarm application. Built with FastAPI, SQLModel, and Docker.
+> **Transformant dades de wearables en prevenció de salut real.**
 
-## 🏗 System Architecture
+WeSleep és una solució dissenyada per a **mútues de salut i proveïdors d'assegurances**. Transforma les dades en brut dels wearables dels pacients en una eina de prevenció de salut i millora del benestar diari, actuant com un pont entre la tecnologia de consum i l'atenció mèdica professional.
 
-### Directory Structure
+---
 
-```ascii
-WeSleep/
-├── app/
-│   ├── routers/             # API Route Handlers
-│   │   ├── alarm.py         # Smart Alarm endpoints (prediction logic)
-│   │   ├── deps.py          # API Dependencies (DB Session)
-│   │   └── wearable.py      # Raw Data Ingestion endpoints
-│   ├── services/            # External Service Integrations
-│   │   └── reasoning_service.py # Google Gemini AI — personalized sleep reasoning
-│   ├── config.py            # Environment Configuration (Pydantic)
-│   ├── database.py          # Database Connection (Async SQLite)
-│   ├── logic.py             # Core Business Logic (Parsing, Scoring, Algorithms)
-│   ├── main.py              # Application Entry Point & Lifespan
-│   └── models.py            # Database Models & Pydantic Schemas
-├── data/                    # Persistent Storage (SQLite)
-├── docs/                    # Documentation & Examples
-│   └── smart_alarm_examples.md # cURL examples for Smart Alarm POST
-├── tests/                   # Pytest Suite
-├── .env.example             # Environment Variables Template
-├── docker-compose.yml       # Container Orchestration
-└── pyproject.toml           # Python Dependencies (Ruff, Pytest, FastAPI)
-```
+## 🎯 Visió
 
-### Data Flow
+El son no és només descans; és el **biomarcador més precís de la salut general d'un individu**. WeSleep no busca substituir el consell mèdic, sinó apoderar l'usuari amb intel·ligència artificial perquè prengui el control del seu descans i s'avanci a possibles problemes de salut **abans que esdevinguin crònics**.
 
-The system follows a **"Store Raw, Process on Demand"** philosophy to ensure data integrity and auditability.
+---
 
-1.  **Ingestion (Webhook)**
-    *   **Source**: Wearable Device (e.g., Apple Watch via Shortcut/App).
-    *   **Endpoint**: `POST /api/v1/wearable/`
-    *   **Action**: Validates the payload against `WearableRawPayload`.
-    *   **Storage**: Saves the **entire raw JSON** into the `sleep_records` table in SQLite. No transformation is done at this stage to preserve original data.
+## ✨ Funcionalitats Principals
 
-2.  **Smart Alarm Request**
-    *   **Source**: User App requesting an optimal wake-up time.
-    *   **Endpoint**: `POST /api/v1/alarm/smart-alarm`
-    *   **Input**: `sleep_record_id`, `target_time`.
-    *   **Processing**:
-        1.  Retrieves raw JSON from DB.
-        2.  **Parser**: Transforms raw JSON -> `CleanSleepData` (Normalized Internal Format).
-        3.  **Evaluator**: Calculates `quality_score` (0-100) and detects `anomalies` (Apnea, Fragmentation).
-        4.  **Predictor**: Analyzes the Hypnogram (sleep phases) and HRV to find the best wake-up time within a 30-minute window.
-        5.  **Gemini AI Reasoning**: Sends sleep metrics, score, and anomalies to Google Gemini to generate a **personalized 3-4 line analysis** in Spanish. Falls back to heuristic reasoning if the API key is missing or the call fails.
-    *   **Output**: JSON with suggested time, AI-generated reasoning, and sleep score.
+### 1. Despertador Intel·ligent Predictiu (Smart Alarm)
 
-## 📖 Data Dictionary
+El nucli de WeSleep és garantir que l'usuari es desperti amb la **màxima energia possible**, evitant la inèrcia del son (despertar en fase de son profund).
 
-### Key Data Models (`app/models.py`)
+**Com funciona:**
 
-#### `SleepRecord` (Database Table)
-| Field | Type | Description |
-|-------|------|-------------|
-| `id` | UUID | Primary Key. Internal unique identifier. |
-| `user_id` | UUID | Owner of the data. |
-| `timestamp` | DateTime | When the sleep session ended (indexed). |
-| `payload` | JSON | **Full original payload** from the provider. |
-| `provider_source` | String | e.g., "apple_healthkit". |
+Atès que els wearables no transmeten dades en temps real durant la nit, WeSleep utilitza un **motor predictiu basat en l'històric de l'usuari**.
 
-#### `CleanSleepData` (Internal Logic Object)
-Normalized view of the sleep data used for analysis.
-| Field | Description |
-|-------|-------------|
-| `duration` | Total sleep time in milliseconds. |
-| `hypnogram` | List of sleep segments (Start, End, Phase). Phases: `deep`, `light`, `rem`, `awake`. |
-| `media_HR` | Average Heart Rate. |
-| `HRV` | Heart Rate Variability (SDNN). Higher is generally better/more recovered. |
-| `SpO2` | Blood Oxygen Saturation (Avg, Min, Max). <90% triggers apnea warning. |
-| `movimiento` | Normalized movement index (0-1). |
+- **La Finestra de Despertar:** Si l'usuari configura l'alarma a les 7:30 AM, el sistema obre una finestra intel·ligent de 30 minuts (de 7:00 a 7:30 AM).
+- L'algorisme analitza els patrons de les nits anteriors i calcula el moment estadísticament més probable en què l'usuari estarà en una fase de **son lleuger** (p. ex., a les 7:20 AM), programant l'alarma per a aquest instant precís.
 
-## 🤖 AI Reasoning — Groq + Llama 3.3 70B
+---
 
-The Smart Alarm uses **Groq** (100% free) with **Llama 3.3 70B** to generate professional, personalized sleep analyses. Each response includes a 3-4 line reasoning in Spanish that considers:
+### 2. Motor d'Anàlisi Preventiu (Sense Diagnòstics)
 
-- Sleep duration & efficiency
-- HRV and heart rate patterns
-- SpO2 levels & breathing rate
-- Detected anomalies (apnea, fragmentation)
-- Sleep architecture (deep/light/REM ratios)
+Utilitzem **Intel·ligència Artificial Avançada (LLMs)** per analitzar tendències a llarg termini en mètriques clau:
 
-**Why Groq?** Free tier (30 RPM, 14,400 RPD), fastest inference (~500 tokens/sec), and Llama 3.3 70B rivals GPT-4 on reasoning.
+| Mètrica | Descripció |
+|---|---|
+| Variabilitat de la Freqüència Cardíaca (VFC) | Indicador de recuperació i estrès del sistema nerviós |
+| Fases del son | Distribució de son lleuger, profund i REM |
+| Oxigen en sang (SpO₂) | Detecció de possibles apnees o dessaturacions |
 
-**Fallback**: If `GROQ_API_KEY` is not set or the API call fails, the system gracefully falls back to the original heuristic reasoning — no functionality is lost.
+**Detecció de Tendències, no Malalties:**
 
-See [`docs/smart_alarm_examples.md`](docs/smart_alarm_examples.md) for 5 ready-to-use cURL examples.
+El sistema actua com una **alerta primerenca**. Si les mètriques de recuperació d'un usuari empitjoren de manera sostinguda durant diversos dies, el sistema **no emet cap diagnòstic mèdic**.
 
-## 🚀 Setup & Run
+**Derivació a l'Expert:**
 
-1.  **Environment Setup**
-    ```bash
-    cp .env.example .env
-    # Edit .env with your config:
-    #   GROQ_API_KEY=your-groq-api-key  (free at https://console.groq.com)
-    ```
+L'assistent notifica l'usuari amb un missatge clar:
 
-2.  **Run with Docker**
-    ```bash
-    docker compose up --build
-    ```
-    API will be available at: `http://localhost:8000`
-    Docs: `http://localhost:8000/docs`
+> *"Hem detectat una anomalia sostinguda en les teves mètriques de recuperació durant l'última setmana. Et recomanem consultar aquestes dades amb un professional de la salut."*
 
-3.  **Run Tests**
-    ```bash
-    docker compose exec api pytest
-    # Or locally:
-    .venv/bin/python -m pytest tests/ -v
-    ```
+**Generació d'Informes (Exportació per al Metge):**
+
+Amb un sol clic, WeSleep genera un **informe detallat (PDF)** que aïlla les nits i mètriques exactes des que va començar la tendència negativa, facilitant enormement la feina del metge o especialista de la mútua.
+
+---
+
+## 💼 Model de Negoci · B2B SaaS
+
+WeSleep s'integra de forma transparent (**White-label**) a l'ecosistema de les mútues de salut. Oferint aquesta eina als seus assegurats, les mútues aconsegueixen:
+
+- **Fidelització del client** — Oferint un servei de valor afegit d'ús diari (el despertador).
+- **Reducció de costos mèdics** — Fomentant la prevenció. Un usuari que acudeix al metge de manera primerenca gràcies a un avís de WeSleep evita tractaments reactius molt més costosos en el futur.
+
+---
+
+
