@@ -2,7 +2,66 @@
   "hash": "06797a2f",
   "configHash": "135df27c",
   "lockfileHash": "2d49e17f",
-  "browserHash": "d1dcea7f",
-  "optimized": {},
-  "chunks": {}
+  "browserHash": "5cce356a",
+  "optimized": {
+    "vue": {
+      "src": "../../node_modules/vue/dist/vue.runtime.esm-bundler.js",
+      "file": "vue.js",
+      "fileHash": "2d7c1cde",
+      "needsInterop": false
+    },
+    "vuetify": {
+      "src": "../../node_modules/vuetify/lib/framework.js",
+      "file": "vuetify.js",
+      "fileHash": "f857a096",
+      "needsInterop": false
+    },
+    "vuetify/components": {
+      "src": "../../node_modules/vuetify/lib/components/index.js",
+      "file": "vuetify_components.js",
+      "fileHash": "71c2d739",
+      "needsInterop": false
+    },
+    "vuetify/directives": {
+      "src": "../../node_modules/vuetify/lib/directives/index.js",
+      "file": "vuetify_directives.js",
+      "fileHash": "749f53ff",
+      "needsInterop": false
+    },
+    "vuetify/iconsets/mdi": {
+      "src": "../../node_modules/vuetify/lib/iconsets/mdi.js",
+      "file": "vuetify_iconsets_mdi.js",
+      "fileHash": "359c3c57",
+      "needsInterop": false
+    },
+    "vue-router": {
+      "src": "../../node_modules/vue-router/dist/vue-router.mjs",
+      "file": "vue-router.js",
+      "fileHash": "6f8ecd8e",
+      "needsInterop": false
+    }
+  },
+  "chunks": {
+    "chunk-CBWNJY7D": {
+      "file": "chunk-CBWNJY7D.js"
+    },
+    "chunk-MU7HJA6I": {
+      "file": "chunk-MU7HJA6I.js"
+    },
+    "chunk-J5KQZG7T": {
+      "file": "chunk-J5KQZG7T.js"
+    },
+    "chunk-LD573VP6": {
+      "file": "chunk-LD573VP6.js"
+    },
+    "chunk-5CR4KVE6": {
+      "file": "chunk-5CR4KVE6.js"
+    },
+    "chunk-PSFO7H4Y": {
+      "file": "chunk-PSFO7H4Y.js"
+    },
+    "chunk-ZETSIBQN": {
+      "file": "chunk-ZETSIBQN.js"
+    }
+  }
 }
