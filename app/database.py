@@ -3,6 +3,7 @@ Database connection and session management.
 
 This module sets up the asynchronous engine and session maker for SQLModel/SQLAlchemy.
 """
+from typing import AsyncGenerator
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlalchemy.orm import sessionmaker
@@ -10,12 +11,11 @@ from sqlmodel import SQLModel
 
 from app.config import settings
 
-# Crear motor asíncrono para SQLite
-# check_same_thread=False es necesario para SQLite
+# Crear motor asíncrono para PostgreSQL
 engine = create_async_engine(
-    settings.SQLITE_URL, 
-    echo=True, 
-    connect_args={"check_same_thread": False}
+    settings.DATABASE_URL, 
+    echo=True,
+    future=True
 )
 
 async_session_maker = sessionmaker(
@@ -24,7 +24,7 @@ async_session_maker = sessionmaker(
     expire_on_commit=False
 )
 
-async def init_db():
+async def init_db() -> None:
     """
     Initialize the database by creating all tables defined in SQLModel metadata.
 
@@ -34,7 +34,7 @@ async def init_db():
         # En producción usaríamos Alembic, aquí creamos tablas para dev rápido
         await conn.run_sync(SQLModel.metadata.create_all)
 
-async def get_session():
+async def get_session() -> AsyncGenerator[AsyncSession, None]:
     """
     Dependency to provide a database session.
 

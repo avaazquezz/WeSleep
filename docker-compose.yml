@@ -8,15 +8,14 @@ services:
     # Map host port 8000 to container port 8000
     ports:
       - "8000:8000"
-    # Persist SQLite data and hot-reload code
+    # Hot-reload code
     volumes:
       - .:/app
-      - sqlite_data:/app/data
     environment:
       - PROJECT_NAME=WeSleep
       - API_V1_STR=/api/v1
-      # Connection string using aiosqlite driver
-      - SQLITE_URL=sqlite+aiosqlite:////app/data/wesleep.db
+      # PostgreSQL async connection string (Supabase compatible)
+      - DATABASE_URL=${DATABASE_URL}
     restart: unless-stopped
     healthcheck:
       test: [ "CMD", "curl", "-f", "http://localhost:8000/health" ]
@@ -25,5 +24,4 @@ services:
       retries: 3
       start_period: 10s
 
-volumes:
-  sqlite_data:
+volumes: {}

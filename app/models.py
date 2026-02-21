@@ -3,14 +3,14 @@ Database models and Pydantic schemas for WeSleep.
 
 Defines the structure for Sleep Records, Smart Alarm requests, and internal data formats.
 """
-from datetime import datetime
+from datetime import datetime, date as date_type
 from typing import Optional, Dict, Any, List
 from uuid import UUID, uuid4
 from enum import Enum
 
-from sqlmodel import Field, SQLModel, JSON
+from sqlmodel import Field, SQLModel, Relationship
 from sqlalchemy import Column
-from sqlalchemy.dialects.sqlite import JSON as SQLiteJSON
+from sqlalchemy.dialects.postgresql import JSONB
 from pydantic import BaseModel, ConfigDict
 
 
@@ -139,33 +139,51 @@ class CleanSleepData(BaseModel):
 
 # --- Database Models ---
 
+class Tenant(SQLModel, table=True):
+    """
+    Database model representing a Health Mutual (Mutua de salud) or B2B client.
+    """
+    __tablename__ = "tenants"
+
+    id: UUID = Field(default_factory=uuid4, primary_key=True)
+    name: str = Field(index=True)
+    api_key: str = Field(unique=True, index=True)
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+    patients: List["Patient"] = Relationship(back_populates="tenant")
+
+
+class Patient(SQLModel, table=True):
+    """
+    Database model representing an end-user (patient) belonging to a Tenant.
+    """
+    __tablename__ = "patients"
+
+    id: UUID = Field(default_factory=uuid4, primary_key=True)
+    tenant_id: UUID = Field(foreign_key="tenants.id", index=True)
+    internal_mock_id: str = Field(unique=True, index=True, description="ID for synthetic data association")
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+    tenant: Optional[Tenant] = Relationship(back_populates="patients")
+    sleep_records: List["SleepRecord"] = Relationship(back_populates="patient")
+
+
 class SleepRecord(SQLModel, table=True):
     """
-    Database model for storing raw sleep data.
-
-    Attributes:
-        id: Unique identifier (UUID).
-        user_id: ID of the user who owns the record.
-        timestamp: Time when the record was created/received.
-        provider_source: Source of the data (e.g., 'apple_healthkit').
-        record_id_provider: External ID from the provider.
-        payload: Full raw JSON payload.
-        created_at: Database insertion timestamp.
+    Database model for storing raw sleep data for a specific night.
     """
     __tablename__ = "sleep_records"
 
     id: UUID = Field(default_factory=uuid4, primary_key=True)
-    user_id: UUID = Field(index=True, nullable=False) # Simulado por ahora, vendría del token
-    timestamp: datetime = Field(default_factory=datetime.utcnow, index=True)
-    
-    # Metadatos para búsqueda rápida
-    provider_source: str = Field(index=True)
-    record_id_provider: str = Field(index=True)
+    patient_id: UUID = Field(foreign_key="patients.id", index=True)
+    date: date_type = Field(index=True, description="The date of the sleep night")
     
     # Payload completo
-    payload: Dict[str, Any] = Field(default={}, sa_column=Column(JSON))
+    payload: Dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSONB))
 
     created_at: datetime = Field(default_factory=datetime.utcnow)
+
+    patient: Optional[Patient] = Relationship(back_populates="sleep_records")
 
 
 # --- API Request/Response Models ---
