@@ -196,10 +196,10 @@ class AISleepAnalyzer:
 
         user_prompt = "\n".join(
             [
-                "Comparativa 30 días vs 30 días anteriores (valores medios):",
-                f"- HRV baseline: {_fmt(baseline_hrv, ' ms')} | HRV actual: {_fmt(current_hrv, ' ms')} | Δ%: {_fmt(hrv_pct, '%')}",
-                f"- Eficiencia baseline: {_fmt(baseline_eff)} | Eficiencia actual: {_fmt(current_eff)} | Δ%: {_fmt(eff_pct, '%')}",
-                "Instrucción: si no hay caída grave, responde con string vacío.",
+                "Tendencia en los últimos 30 días (primera mitad vs segunda mitad; valores medios):",
+                f"- HRV (1ª mitad): {_fmt(baseline_hrv, ' ms')} | HRV (2ª mitad): {_fmt(current_hrv, ' ms')} | Δ%: {_fmt(hrv_pct, '%')}",
+                f"- Eficiencia (1ª mitad): {_fmt(baseline_eff)} | Eficiencia (2ª mitad): {_fmt(current_eff)} | Δ%: {_fmt(eff_pct, '%')}",
+                "Instrucción: si no hay caída grave, responde con string vacío (no hay alerta).",
             ]
         )
 

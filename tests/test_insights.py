@@ -96,9 +96,9 @@ async def test_weekly_insights_insufficient_data_400(async_client, session_maker
 @pytest.mark.asyncio
 async def test_monthly_insights_returns_alert_when_drop_severe(async_client, session_maker):
     patient = await _seed_patient(session_maker, internal_mock_id="mock_fragmented")
-    # 60 days: baseline 30 high metrics, current 30 low metrics to trigger alert
-    await _seed_sleep_records(session_maker, patient.id, 30, start_days_ago=59, hrv=70.0, eff=0.9)
-    await _seed_sleep_records(session_maker, patient.id, 30, start_days_ago=29, hrv=50.0, eff=0.7)
+    # 30 days: first 15 high metrics, last 15 low metrics to trigger alert
+    await _seed_sleep_records(session_maker, patient.id, 15, start_days_ago=29, hrv=70.0, eff=0.9)
+    await _seed_sleep_records(session_maker, patient.id, 15, start_days_ago=14, hrv=50.0, eff=0.7)
 
     mock_client = _mock_groq_return("ALERTA FORMAL\nL2\nL3\nL4\nL5")
     with patch("app.services.reasoning_service.AsyncGroq", return_value=mock_client), patch(
@@ -115,7 +115,7 @@ async def test_monthly_insights_returns_alert_when_drop_severe(async_client, ses
 @pytest.mark.asyncio
 async def test_monthly_insights_no_alert_when_stable(async_client, session_maker):
     patient = await _seed_patient(session_maker, internal_mock_id="mock_stable")
-    await _seed_sleep_records(session_maker, patient.id, 60, start_days_ago=59, hrv=70.0, eff=0.9)
+    await _seed_sleep_records(session_maker, patient.id, 30, start_days_ago=29, hrv=70.0, eff=0.9)
     resp = await async_client.get(f"/api/v1/insights/monthly/{patient.id}")
     assert resp.status_code == 200, resp.text
     data = resp.json()

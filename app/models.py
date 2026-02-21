@@ -10,7 +10,7 @@ from uuid import UUID, uuid4
 from enum import Enum
 
 from sqlmodel import Field, SQLModel, Relationship
-from sqlalchemy import Column, JSON
+from sqlalchemy import Column, DateTime, JSON
 from sqlalchemy.dialects.postgresql import JSONB
 from pydantic import BaseModel, ConfigDict
 
@@ -185,7 +185,10 @@ class Tenant(SQLModel, table=True):
     id: UUID = Field(default_factory=uuid4, primary_key=True)
     name: str = Field(nullable=False, index=True)
     api_key: str = Field(nullable=False, unique=True, index=True)
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    created_at: datetime = Field(
+        default_factory=lambda: datetime.now(timezone.utc),
+        sa_column=Column(DateTime(timezone=True), nullable=False),
+    )
 
     patients: List["Patient"] = Relationship(
         back_populates="tenant",
@@ -215,7 +218,10 @@ class Patient(SQLModel, table=True):
         index=True,
         description="ID for synthetic data association",
     )
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    created_at: datetime = Field(
+        default_factory=lambda: datetime.now(timezone.utc),
+        sa_column=Column(DateTime(timezone=True), nullable=False),
+    )
 
     tenant: Optional["Tenant"] = Relationship(
         back_populates="patients",
@@ -251,7 +257,10 @@ class SleepRecord(SQLModel, table=True):
         sa_column=Column(JSON().with_variant(JSONB, "postgresql"), nullable=False),
     )
 
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    created_at: datetime = Field(
+        default_factory=lambda: datetime.now(timezone.utc),
+        sa_column=Column(DateTime(timezone=True), nullable=False),
+    )
 
     patient: Optional["Patient"] = Relationship(
         back_populates="sleep_records",

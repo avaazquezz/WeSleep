@@ -292,7 +292,7 @@ async def get_monthly_insights(
     patient_id: UUID,
     session: AsyncSession = Depends(get_session),
 ) -> MonthlyInsightsOk:
-    since = date.today() - timedelta(days=59)
+    since = date.today() - timedelta(days=29)
     statement = (
         select(SleepRecord.date, SleepRecord.payload)
         .where(SleepRecord.patient_id == patient_id, SleepRecord.date >= since)
@@ -301,12 +301,13 @@ async def get_monthly_insights(
     result = await session.exec(statement)
     records = result.all()
 
-    last_60 = records[-60:]
-    if len(last_60) < 60:
+    last_30 = records[-30:]
+    if len(last_30) < 30:
         raise HTTPException(status_code=400, detail="Datos insuficientes para el análisis")
 
-    baseline_rows = last_60[:30]
-    current_rows = last_60[30:]
+    # Intra-mes: primera mitad vs segunda mitad para estimar caída sostenida
+    baseline_rows = last_30[:15]
+    current_rows = last_30[15:]
 
     base_hrv_vals: list[float] = []
     base_deep_vals: list[float] = []
@@ -340,7 +341,7 @@ async def get_monthly_insights(
         if eff is not None:
             cur_eff_vals.append(eff)
 
-    if len(baseline_rows) < 30 or len(current_rows) < 30:
+    if len(baseline_rows) < 15 or len(current_rows) < 15:
         raise HTTPException(status_code=400, detail="Datos insuficientes para el análisis")
 
     baseline_stats = AggregateStats(
