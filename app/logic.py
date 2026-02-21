@@ -7,8 +7,8 @@ Includes functions for:
 - Detecting anomalies (Apnea, Fragmentation).
 - Predicting optimal wake-up times (Smart Alarm).
 """
-from datetime import datetime, timedelta, timezone
-from typing import List, Optional, Dict, Any
+from datetime import date, datetime, time, timedelta, timezone
+from typing import Any, Dict, List, Optional
 from uuid import UUID
 
 from pydantic import ValidationError
@@ -363,3 +363,173 @@ async def predict_optimal_wakeup(
         confidence=0.9,
         reasoning=enriched_reasoning
     )
+
+
+# --- Historical Smart Alarm (Pure Statistics) ---
+
+def _parse_hhmm(value: str) -> time | None:
+    try:
+        return datetime.strptime(value.strip(), "%H:%M").time()
+    except Exception:
+        return None
+
+
+def _parse_yyyy_mm_dd(value: Any) -> date | None:
+    if isinstance(value, date) and not isinstance(value, datetime):
+        return value
+    if isinstance(value, str):
+        try:
+            return date.fromisoformat(value.strip())
+        except Exception:
+            return None
+    return None
+
+
+def _coerce_dt_for_hypnogram(value: Any, base_date: date) -> datetime | None:
+    if isinstance(value, datetime):
+        dt = value
+    elif isinstance(value, str):
+        raw = value.strip()
+        # Time-only: "HH:MM"
+        t = _parse_hhmm(raw)
+        if t is not None:
+            return datetime.combine(base_date, t)
+        # Datetime-like (ISO / RFC3339)
+        normalized = raw.replace("Z", "+00:00")
+        try:
+            dt = datetime.fromisoformat(normalized)
+        except Exception:
+            return None
+    else:
+        return None
+
+    # Normalize to naive UTC for consistent comparisons
+    if dt.tzinfo is not None:
+        dt = dt.astimezone(timezone.utc).replace(tzinfo=None)
+    return dt
+
+
+def _extract_hypnogram_segments(record: dict[str, Any]) -> list[tuple[datetime, datetime, str]]:
+    hypnogram = record.get("hypnogram")
+    if not isinstance(hypnogram, list):
+        return []
+
+    base_date = _parse_yyyy_mm_dd(record.get("date")) or date.today()
+    segments: list[tuple[datetime, datetime, str]] = []
+
+    for raw_seg in hypnogram:
+        if not isinstance(raw_seg, dict):
+            continue
+        phase_raw = raw_seg.get("phase")
+        if not isinstance(phase_raw, str) or not phase_raw.strip():
+            continue
+        phase = phase_raw.strip().lower()
+
+        start_raw = (
+            raw_seg.get("start_time")
+            if raw_seg.get("start_time") is not None
+            else raw_seg.get("start_at")
+        )
+        end_raw = (
+            raw_seg.get("end_time")
+            if raw_seg.get("end_time") is not None
+            else raw_seg.get("end_at")
+        )
+
+        start_dt = _coerce_dt_for_hypnogram(start_raw, base_date)
+        end_dt = _coerce_dt_for_hypnogram(end_raw, base_date)
+        if start_dt is None or end_dt is None:
+            continue
+        if end_dt <= start_dt:
+            # Handles time-only segments crossing midnight
+            end_dt = end_dt + timedelta(days=1)
+
+        segments.append((start_dt, end_dt, phase))
+
+    return segments
+
+
+def _phase_at(segments: list[tuple[datetime, datetime, str]], at: datetime) -> str | None:
+    for start_dt, end_dt, phase in segments:
+        if start_dt <= at < end_dt:
+            return phase
+    return None
+
+
+def calculate_optimal_wakeup_time(
+    historical_records: list[dict],
+    target_time_str: str,
+    window_minutes: int = 30,
+) -> str:
+    """
+    Computes the best wake-up time within a window ending at target_time_str.
+
+    Scoring (per-minute, aggregated over last 7 records):
+    - light/awake: +2
+    - rem: +1
+    - deep: -2
+    """
+    target_t = _parse_hhmm(target_time_str)
+    if target_t is None:
+        return target_time_str
+
+    if window_minutes < 0:
+        window_minutes = 0
+
+    if not historical_records:
+        return target_time_str
+
+    # Evaluate window minute-by-minute: [target - window, target] inclusive
+    anchor = datetime(2000, 1, 1, target_t.hour, target_t.minute)
+    window_start_anchor = anchor - timedelta(minutes=window_minutes)
+    candidate_times = [
+        window_start_anchor + timedelta(minutes=i) for i in range(window_minutes + 1)
+    ]
+    candidate_keys = [dt.strftime("%H:%M") for dt in candidate_times]
+    scores: dict[str, int] = {k: 0 for k in candidate_keys}
+
+    weights: dict[str, int] = {"light": 2, "awake": 2, "rem": 1, "deep": -2}
+
+    any_points = 0
+    for record in historical_records[:7]:
+        try:
+            if not isinstance(record, dict):
+                continue
+            segments = _extract_hypnogram_segments(record)
+            if not segments:
+                continue
+
+            record_start = min(s for s, _, _ in segments)
+            record_end = max(e for _, e, _ in segments)
+
+            base_date_candidates = [record_start.date(), record_start.date() + timedelta(days=1)]
+            base_date_for_window: date | None = None
+            for candidate_date in base_date_candidates:
+                candidate_dt = datetime.combine(candidate_date, target_t)
+                if record_start <= candidate_dt <= record_end:
+                    base_date_for_window = candidate_date
+                    break
+            if base_date_for_window is None:
+                base_date_for_window = record_end.date()
+
+            window_end_dt = datetime.combine(base_date_for_window, target_t)
+            window_start_dt = window_end_dt - timedelta(minutes=window_minutes)
+
+            for idx, key in enumerate(candidate_keys):
+                at = window_start_dt + timedelta(minutes=idx)
+                phase = _phase_at(segments, at)
+                if phase is None:
+                    continue
+                scores[key] += weights.get(phase, 0)
+                any_points += 1
+        except Exception:
+            continue
+
+    if any_points == 0:
+        return target_time_str
+
+    best_score = max(scores.values())
+    best_idx = min(
+        i for i, k in enumerate(candidate_keys) if scores[k] == best_score
+    )
+    return candidate_keys[best_idx]
