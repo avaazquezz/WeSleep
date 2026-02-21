@@ -41,11 +41,9 @@ Utilitzem **Intel·ligència Artificial Avançada (LLMs)** per analitzar tendèn
 
 El sistema està dissenyat amb restriccions estrictes (System Prompts) per no emetre mai cap diagnòstic mèdic. Actua exclusivament com un sistema d'alerta estructurat en dues capes analítiques de diferent impacte:
 
-**A. Resum Setmanal (Retenció i Benestar Diari):**
-Una funcionalitat enfocada al pacient (User Engagement). El sistema compara les mètriques dels últims 7 dies amb la setmana anterior i genera un resum ràpid, empàtic i motivador al Dashboard web. L'objectiu és fomentar els bons hàbits amb missatges positius i de fàcil comprensió, mantenint l'usuari actiu a la plataforma.
+**A. Resum Setmanal (Retenció i Benestar Diari):** Una funcionalitat enfocada al pacient (User Engagement). El sistema compara les mètriques dels últims 7 dies amb la setmana anterior i genera un resum ràpid, empàtic i motivador al Dashboard web. L'objectiu és fomentar els bons hàbits amb missatges positius i de fàcil comprensió, mantenint l'usuari actiu a la plataforma.
 
-**B. Detector d'Anomalies Mensual (Prevenció Clínica B2B):**
-Una funcionalitat orientada a la prevenció clínica B2B. El sistema analitza una finestra dels últims 30 dies cercant patrons de deteriorament de la salut. Per detectar una caiguda sostinguda, compara la 1a meitat del període amb la 2a meitat (tendència intra‑mes). Si s'identifica una disminució crítica (p. ex., >15% en la VFC o en l'eficiència del son), s'activa un protocol de derivació. La IA redacta una alerta formal i proactiva informant l'usuari de l'anomalia en les seves mètriques de recuperació i recomanant-li de manera contundent que programi una revisió amb un especialista de la seva mútua.
+**B. Detector d'Anomalies Mensual (Prevenció Clínica B2B):** Una funcionalitat orientada a la prevenció clínica B2B. El sistema analitza una finestra dels últims 30 dies cercant patrons de deteriorament de la salut. Per detectar una caiguda sostinguda, compara la 1a meitat del període amb la 2a meitat (tendència intra‑mes). Si s'identifica una disminució crítica (p. ex., >15% en la VFC o en l'eficiència del son), s'activa un protocol de derivació. La IA redacta una alerta formal i proactiva informant l'usuari de l'anomalia en les seves mètriques de recuperació i recomanant-li de manera contundent que programi una revisió amb un especialista de la seva mútua.
 ---
 
 ## 💼 Model de Negoci · B2B SaaS
