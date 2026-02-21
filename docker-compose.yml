@@ -2,6 +2,24 @@
 # Orchestrates the API service and persists data via volumes.
 
 services:
+  db:
+    image: postgres:17
+    container_name: wesleep-db
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=wesleep
+    ports:
+      - "5432:5432"
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d wesleep"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
   api:
     build: .
     container_name: wesleep-api
@@ -14,8 +32,12 @@ services:
     environment:
       - PROJECT_NAME=WeSleep
       - API_V1_STR=/api/v1
-      # PostgreSQL async connection string (Supabase compatible)
-      - DATABASE_URL=${DATABASE_URL}
+      # PostgreSQL async connection string (local by default)
+      - DATABASE_URL=postgresql+asyncpg://postgres:postgres@db:5432/wesleep
+      - GROQ_API_KEY=${GROQ_API_KEY:-}
+    depends_on:
+      db:
+        condition: service_healthy
     restart: unless-stopped
     healthcheck:
       test: [ "CMD", "curl", "-f", "http://localhost:8000/health" ]
@@ -24,4 +46,5 @@ services:
       retries: 3
       start_period: 10s
 
-volumes: {}
+volumes:
+  db-data: {}

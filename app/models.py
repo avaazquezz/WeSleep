@@ -3,17 +3,15 @@ Database models and Pydantic schemas for WeSleep.
 
 Defines the structure for Sleep Records, Smart Alarm requests, and internal data formats.
 """
-from __future__ import annotations
-
 from datetime import date as date_type
 from datetime import datetime, timezone
-from typing import Any
+from typing import Any, List, Optional
 from uuid import UUID, uuid4
 from enum import Enum
 
 from sqlmodel import Field, SQLModel, Relationship
-from sqlalchemy import Column, DateTime, ForeignKey, text, func
-from sqlalchemy.dialects.postgresql import JSONB, UUID as PG_UUID
+from sqlalchemy import Column, DateTime, JSON
+from sqlalchemy.dialects.postgresql import JSONB
 from pydantic import BaseModel, ConfigDict
 
 
@@ -184,28 +182,15 @@ class Tenant(SQLModel, table=True):
     """
     __tablename__ = "tenants"
 
-    id: UUID = Field(
-        default_factory=uuid4,
-        primary_key=True,
-        sa_column=Column(
-            PG_UUID(as_uuid=True),
-            primary_key=True,
-            nullable=False,
-            server_default=text("uuid_generate_v4()"),
-        ),
-    )
+    id: UUID = Field(default_factory=uuid4, primary_key=True)
     name: str = Field(nullable=False, index=True)
     api_key: str = Field(nullable=False, unique=True, index=True)
     created_at: datetime = Field(
         default_factory=lambda: datetime.now(timezone.utc),
-        sa_column=Column(
-            DateTime(timezone=True),
-            nullable=False,
-            server_default=func.now(),
-        ),
+        sa_column=Column(DateTime(timezone=True), nullable=False),
     )
 
-    patients: list[Patient] = Relationship(
+    patients: List["Patient"] = Relationship(
         back_populates="tenant",
         sa_relationship_kwargs={
             "lazy": "selectin",
@@ -221,26 +206,11 @@ class Patient(SQLModel, table=True):
     """
     __tablename__ = "patients"
 
-    id: UUID = Field(
-        default_factory=uuid4,
-        primary_key=True,
-        sa_column=Column(
-            PG_UUID(as_uuid=True),
-            primary_key=True,
-            nullable=False,
-            server_default=text("uuid_generate_v4()"),
-        ),
-    )
+    id: UUID = Field(default_factory=uuid4, primary_key=True)
     tenant_id: UUID = Field(
         foreign_key="tenants.id",
         nullable=False,
         index=True,
-        sa_column=Column(
-            PG_UUID(as_uuid=True),
-            ForeignKey("tenants.id", ondelete="CASCADE"),
-            nullable=False,
-            index=True,
-        ),
     )
     internal_mock_id: str = Field(
         nullable=False,
@@ -250,18 +220,14 @@ class Patient(SQLModel, table=True):
     )
     created_at: datetime = Field(
         default_factory=lambda: datetime.now(timezone.utc),
-        sa_column=Column(
-            DateTime(timezone=True),
-            nullable=False,
-            server_default=func.now(),
-        ),
+        sa_column=Column(DateTime(timezone=True), nullable=False),
     )
 
-    tenant: Tenant | None = Relationship(
+    tenant: Optional["Tenant"] = Relationship(
         back_populates="patients",
         sa_relationship_kwargs={"lazy": "selectin"},
     )
-    sleep_records: list[SleepRecord] = Relationship(
+    sleep_records: List["SleepRecord"] = Relationship(
         back_populates="patient",
         sa_relationship_kwargs={
             "lazy": "selectin",
@@ -277,45 +243,26 @@ class SleepRecord(SQLModel, table=True):
     """
     __tablename__ = "sleep_records"
 
-    id: UUID = Field(
-        default_factory=uuid4,
-        primary_key=True,
-        sa_column=Column(
-            PG_UUID(as_uuid=True),
-            primary_key=True,
-            nullable=False,
-            server_default=text("uuid_generate_v4()"),
-        ),
-    )
+    id: UUID = Field(default_factory=uuid4, primary_key=True)
     patient_id: UUID = Field(
         foreign_key="patients.id",
         nullable=False,
         index=True,
-        sa_column=Column(
-            PG_UUID(as_uuid=True),
-            ForeignKey("patients.id", ondelete="CASCADE"),
-            nullable=False,
-            index=True,
-        ),
     )
     date: date_type = Field(index=True, description="The date of the sleep night")
     
     # Payload completo
     payload: dict[str, Any] = Field(
         default_factory=dict,
-        sa_column=Column(JSONB, nullable=False),
+        sa_column=Column(JSON().with_variant(JSONB, "postgresql"), nullable=False),
     )
 
     created_at: datetime = Field(
         default_factory=lambda: datetime.now(timezone.utc),
-        sa_column=Column(
-            DateTime(timezone=True),
-            nullable=False,
-            server_default=func.now(),
-        ),
+        sa_column=Column(DateTime(timezone=True), nullable=False),
     )
 
-    patient: Patient | None = Relationship(
+    patient: Optional["Patient"] = Relationship(
         back_populates="sleep_records",
         sa_relationship_kwargs={"lazy": "selectin"},
     )

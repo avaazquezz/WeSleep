@@ -39,18 +39,14 @@ Utilitzem **Intel·ligència Artificial Avançada (LLMs)** per analitzar tendèn
 
 **Detecció de Tendències, no Malalties:**
 
-El sistema actua com una **alerta primerenca**. Si les mètriques de recuperació d'un usuari empitjoren de manera sostinguda durant diversos dies, el sistema **no emet cap diagnòstic mèdic**.
+El sistema està dissenyat amb restriccions estrictes (System Prompts) per no emetre mai cap diagnòstic mèdic. Actua exclusivament com un sistema d'alerta estructurat en dues capes analítiques de diferent impacte:
 
-**Derivació a l'Expert:**
+**A. Resum Setmanal (Retenció i Benestar Diari):**
+Una funcionalitat enfocada al pacient (User Engagement). El sistema compara les mètriques dels últims 7 dies amb la setmana anterior i genera un resum ràpid, empàtic i motivador al Dashboard web. L'objectiu és fomentar els bons hàbits amb missatges positius i de fàcil comprensió, mantenint l'usuari actiu a la plataforma.
 
-L'assistent notifica l'usuari amb un missatge clar:
-
-> *"Hem detectat una anomalia sostinguda en les teves mètriques de recuperació durant l'última setmana. Et recomanem consultar aquestes dades amb un professional de la salut."*
-
-**Generació d'Informes (Exportació per al Metge):**
-
-Amb un sol clic, WeSleep genera un **informe detallat (PDF)** que aïlla les nits i mètriques exactes des que va començar la tendència negativa, facilitant enormement la feina del metge o especialista de la mútua.
-
+**B. Detector d'Anomalies Mensual (Prevenció Clínica B2B):**
+Aquest és el veritable motor de prevenció per a la mútua. Actúa com un escàner silenciós que analitza finestres de 30 dies cercant patrons de deteriorament de la salut. Si l'algorisme detecta una caiguda sostinguda i crítica (com una disminució >15% en la VFC o en l'eficiència del son profund), s'activa un protocol de derivació.
+La IA redacta una alerta formal i proactiva informant l'usuari de l'anomalia en les seves mètriques de recuperació i recomanant-li de manera contundent que programi una revisió amb un especialista de la seva mútua.
 ---
 
 ## 💼 Model de Negoci · B2B SaaS
@@ -62,4 +58,11 @@ WeSleep s'integra de forma transparent (**White-label**) a l'ecosistema de les m
 
 ---
 
+
+
+## 📚 Documentació tècnica (per desenvolupadors)
+
+Per una descripció 100% tècnica del backend (arquitectura, model multi‑tenant, endpoints, fluxos, DB i testing), consulta:
+
+- [README Tècnic](README_TECHNICAL.md)
 
