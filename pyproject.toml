@@ -18,7 +18,9 @@ groq = "^0.20.0"
 [tool.poetry.group.dev.dependencies]
 ruff = "^0.2.0"
 pytest = "^8.0.0"
+pytest-asyncio = "^0.23.8"
 httpx = "^0.26.0"
+aiosqlite = "^0.21.0"
 
 [build-system]
 requires = ["poetry-core"]
