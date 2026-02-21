@@ -45,7 +45,7 @@ El sistema està dissenyat amb restriccions estrictes (System Prompts) per no em
 Una funcionalitat enfocada al pacient (User Engagement). El sistema compara les mètriques dels últims 7 dies amb la setmana anterior i genera un resum ràpid, empàtic i motivador al Dashboard web. L'objectiu és fomentar els bons hàbits amb missatges positius i de fàcil comprensió, mantenint l'usuari actiu a la plataforma.
 
 **B. Detector d'Anomalies Mensual (Prevenció Clínica B2B):**
-Aquest és el veritable motor de prevenció per a la mútua. Actúa com un escàner silenciós que analitza finestres de 30 dies cercant patrons de deteriorament de la salut. Si l'algorisme detecta una caiguda sostinguda i crítica (com una disminució >15% en la VFC o en l'eficiència del son profund), s'activa un protocol de derivació.
+Aquest és el veritable motor de prevenció per a la mútua. Actua com un escàner silenciós que analitza una finestra dels **últims 30 dies** cercant patrons de deteriorament de la salut. Per detectar una **caiguda sostinguda**, el sistema compara la **1a meitat** del període amb la **2a meitat** (tendència intra‑mes). Si s'identifica una disminució crítica (p. ex., >15% en la VFC o en l'eficiència del son), s'activa un protocol de derivació.
 La IA redacta una alerta formal i proactiva informant l'usuari de l'anomalia en les seves mètriques de recuperació i recomanant-li de manera contundent que programi una revisió amb un especialista de la seva mútua.
 ---
 
@@ -60,7 +60,7 @@ WeSleep s'integra de forma transparent (**White-label**) a l'ecosistema de les m
 
 
 
-## 📚 Documentació tècnica (per desenvolupadors)
+## 📚 Documentació tècnica
 
 Per una descripció 100% tècnica del backend (arquitectura, model multi‑tenant, endpoints, fluxos, DB i testing), consulta:
 
