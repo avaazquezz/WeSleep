@@ -1,7 +1,5 @@
 <template>
   <v-app>
-    <v-main class="bg-slate-50 min-h-screen">
-      <router-view />
-    </v-main>
+    <router-view />
   </v-app>
 </template>
