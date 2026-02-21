@@ -4,24 +4,17 @@ Database connection and session management.
 This module sets up the asynchronous engine and session maker for SQLModel/SQLAlchemy.
 """
 from typing import AsyncGenerator
-from sqlalchemy.ext.asyncio import create_async_engine
+from sqlalchemy.ext.asyncio import AsyncEngine, async_sessionmaker, create_async_engine
 from sqlmodel.ext.asyncio.session import AsyncSession
-from sqlalchemy.orm import sessionmaker
 from sqlmodel import SQLModel
 
 from app.config import settings
 
 # Crear motor asíncrono para PostgreSQL
-engine = create_async_engine(
-    settings.DATABASE_URL, 
-    echo=True,
-    future=True
-)
+engine: AsyncEngine = create_async_engine(settings.DATABASE_URL, echo=True)
 
-async_session_maker = sessionmaker(
-    engine, 
-    class_=AsyncSession, 
-    expire_on_commit=False
+async_session_maker: async_sessionmaker[AsyncSession] = async_sessionmaker(
+    engine, class_=AsyncSession, expire_on_commit=False
 )
 
 async def init_db() -> None:
