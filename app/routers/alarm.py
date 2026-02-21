@@ -3,7 +3,10 @@ API endpoints for Smart Alarm functionality.
 
 Handles requests to predict the optimal wake-up time based on sleep cycles.
 """
-from fastapi import APIRouter, Depends, HTTPException
+from datetime import date, timedelta
+from uuid import UUID
+
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 
@@ -12,6 +15,7 @@ from app.models import SmartAlarmRequest, SmartAlarmResponse, SleepRecord
 import app.logic as logic
 
 router = APIRouter()
+alarm_router = APIRouter()
 
 @router.post("/smart-alarm", response_model=SmartAlarmResponse)
 async def predict_smart_alarm(
@@ -69,3 +73,44 @@ async def predict_smart_alarm(
         quality_score=quality_score,
         anomalies=anomalies
     )
+
+
+@alarm_router.get("/predict/{patient_id}", status_code=200)
+async def predict_optimal_alarm_time(
+    patient_id: UUID,
+    target_time: str = Query(..., description="Target time in HH:MM format (e.g. 07:30)"),
+    session: AsyncSession = Depends(get_session),
+):
+    since = date.today() - timedelta(days=6)
+    statement = (
+        select(SleepRecord)
+        .where(SleepRecord.patient_id == patient_id, SleepRecord.date >= since)
+        .order_by(SleepRecord.date.desc())
+    )
+    result = await session.exec(statement)
+    records = result.all()
+
+    historical_payloads: list[dict] = []
+    for r in records:
+        if isinstance(r.payload, dict):
+            historical_payloads.append(r.payload)
+
+    optimal = logic.calculate_optimal_wakeup_time(
+        historical_records=historical_payloads,
+        target_time_str=target_time,
+        window_minutes=30,
+    )
+
+    nights = min(7, len(historical_payloads))
+    reason = (
+        f"Basado en {nights} noches históricas (últimos 7 días) y puntuación por fases minuto a minuto."
+        if nights > 0
+        else "Datos insuficientes para estimar una mejor hora; se devuelve la hora objetivo."
+    )
+
+    return {
+        "patient_id": str(patient_id),
+        "target_time": target_time,
+        "optimal_wakeup_time": optimal,
+        "reason": reason,
+    }
