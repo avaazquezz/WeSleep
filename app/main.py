@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings
 
 """
@@ -28,6 +29,25 @@ app = FastAPI(
     title=settings.PROJECT_NAME,
     openapi_url=f"{settings.API_V1_STR}/openapi.json",
     lifespan=lifespan
+)
+
+cors_origins = [
+    origin.strip()
+    for origin in (settings.BACKEND_CORS_ORIGINS or "").split(",")
+    if origin.strip()
+]
+
+cors_allow_all = any(o == "*" for o in cors_origins)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"] if cors_allow_all else cors_origins,
+    allow_origin_regex=None
+    if cors_allow_all
+    else r"^https?://(localhost|127\.0\.0\.1|0\.0\.0\.0|(?:10|192\.168)\.\d+\.\d+\.\d+|(?:172\.(?:1[6-9]|2\d|3[0-1]))\.\d+\.\d+)(?::\d+)?$",
+    allow_credentials=False,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 from app.routers import api_router

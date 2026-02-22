@@ -2,6 +2,8 @@ import { createApp } from 'vue'
 import App from './App.vue'
 import './style.css'
 
+import VueApexCharts from 'vue3-apexcharts'
+
 import 'vuetify/styles'
 import '@mdi/font/css/materialdesignicons.css'
 import { createVuetify } from 'vuetify'
@@ -21,4 +23,8 @@ const vuetify = createVuetify({
   },
 })
 
-createApp(App).use(router).use(vuetify).mount('#app')
+const app = createApp(App)
+app.use(router)
+app.use(vuetify)
+app.use(VueApexCharts)
+app.mount('#app')
