@@ -22,6 +22,9 @@ class Settings(BaseSettings):
 
     # Groq AI — Llama 3.3 70B para reasoning personalizado en Smart Alarm
     GROQ_API_KEY: str = ""
+
+    # CORS (dev): comma-separated list of allowed origins
+    BACKEND_CORS_ORIGINS: str = "http://localhost:5173,http://127.0.0.1:5173"
     
     model_config = SettingsConfigDict(
         env_file=".env",
