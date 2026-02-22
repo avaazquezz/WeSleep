@@ -15,6 +15,12 @@ from app.services.reasoning_service import AISleepAnalyzer
 
 router = APIRouter()
 
+_B2B_MOCK_PATIENT_LABELS: dict[UUID, str] = {
+    UUID("e9f7e4d0-2e3e-4ebf-b77a-18011e5897fa"): "Paciente Sano (Control)",
+    UUID("f05277dc-ecee-4ea2-9c4c-3de9b54008f1"): "Paciente Fatigado (Alerta IA)",
+    UUID("2013db39-79dd-45ec-b9ae-9eeaa7b1b6ad"): "Paciente Fragmentado (Alerta IA)",
+}
+
 
 class DailyMetrics(BaseModel):
     date: date
@@ -266,9 +272,11 @@ async def get_weekly_insights(
     )
 
     analyzer = AISleepAnalyzer()
+    patient_label = _B2B_MOCK_PATIENT_LABELS.get(patient_id)
     recap = await analyzer.generate_weekly_recap(
         current_week=cur_stats.model_dump(),
         prev_week=prev_stats.model_dump(),
+        patient_label=patient_label,
     )
 
     hrv_trend = _pct_change(cur_stats.hrv_avg, prev_stats.hrv_avg)
@@ -356,9 +364,11 @@ async def get_monthly_insights(
     )
 
     analyzer = AISleepAnalyzer()
+    patient_label = _B2B_MOCK_PATIENT_LABELS.get(patient_id)
     alert = await analyzer.generate_monthly_anomaly_alert(
         current_month=current_stats.model_dump(),
         baseline_month=baseline_stats.model_dump(),
+        patient_label=patient_label,
     )
     alert_clean = alert.strip() or None
     return MonthlyInsightsOk(status="ok", alert=alert_clean)
