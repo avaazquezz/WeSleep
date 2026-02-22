@@ -44,7 +44,7 @@ app.add_middleware(
     allow_origins=["*"] if cors_allow_all else cors_origins,
     allow_origin_regex=None
     if cors_allow_all
-    else r"^https?://(localhost|127\.0\.0\.1|0\.0\.0\.0|(?:10|192\.168)\.\d+\.\d+\.\d+|(?:172\.(?:1[6-9]|2\d|3[0-1]))\.\d+\.\d+)(?::\d+)?$",
+    else r"^https?://(localhost|127\.0\.0\.1|0\.0\.0\.0|(?:10|192\.168)\.\d+\.\d+\.\d+|(?:172\.(?:1[6-9]|2\d|3[0-1]))\.\d+\.\d+|[a-z0-9-]+\.ngrok-free\.app)(?::\d+)?$",
     allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
